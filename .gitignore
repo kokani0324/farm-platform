@@ -1,0 +1,28 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+.history/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Maven (root-level safety net; backend/ also has its own)
+target/
+
+# Node (root-level safety net; frontend/ also has its own)
+node_modules/
+dist/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+*.class

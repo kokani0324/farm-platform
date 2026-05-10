@@ -1,0 +1,43 @@
+### IntelliJ HTTP Client 測試檔
+### 在 IntelliJ 中直接點旁邊的綠色箭頭即可發送請求
+
+### 1. 註冊消費者
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "consumer@test.com",
+  "password": "123456",
+  "name": "測試消費者",
+  "phone": "0912345678",
+  "role": "CONSUMER"
+}
+
+### 2. 註冊小農（預設 enabled=false 需審核）
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "farmer@test.com",
+  "password": "123456",
+  "name": "王小農",
+  "phone": "0987654321",
+  "role": "FARMER"
+}
+
+### 3. 登入
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "consumer@test.com",
+  "password": "123456"
+}
+
+> {%
+client.global.set("auth_token", response.body.token);
+%}
+
+### 4. 用 token 呼叫需驗證的 API（之後會加）
+GET http://localhost:8080/api/users/me
+Authorization: Bearer {{auth_token}}

@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: farm-platform-backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/farm_platform?useSSL=false&serverTimezone=Asia/Taipei&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: root
+    # 改成你 MySQL 安裝時設定的 root 密碼
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      # update：開發階段自動依 Entity 變動修改資料表
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+    show-sql: true
+    open-in-view: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 0
+
+server:
+  port: 8080
+
+app:
+  # JWT 設定（生產環境請改成環境變數）
+  jwt:
+    # Base64 編碼的 256-bit secret，請在正式環境替換
+    secret: ${JWT_SECRET:ZmFybS1wbGF0Zm9ybS1zZWNyZXQta2V5LWNoYW5nZS1tZS1pbi1wcm9kdWN0aW9uLTEyMzQ1Njc4OTA=}
+    # token 有效時間（毫秒）= 24 小時
+    expiration-ms: 86400000
+  # 購物車設定
+  cart:
+    # 購物車 TTL（秒）= 30 天
+    ttl-seconds: 2592000
+
+logging:
+  level:
+    com.farm.platform: DEBUG
+    org.springframework.security: INFO
