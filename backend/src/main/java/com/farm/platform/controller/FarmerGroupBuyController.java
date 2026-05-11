@@ -1,8 +1,10 @@
 package com.farm.platform.controller;
 
+import com.farm.platform.dto.GroupBuyOrderResponse;
 import com.farm.platform.dto.GroupBuyRequestResponse;
 import com.farm.platform.dto.GroupBuyResponse;
 import com.farm.platform.dto.PageResponse;
+import com.farm.platform.dto.ParticipationResponse;
 import com.farm.platform.dto.ReviewGroupBuyRequest;
 import com.farm.platform.entity.GroupBuyRequestStatus;
 import com.farm.platform.service.GroupBuyService;
@@ -42,5 +44,27 @@ public class FarmerGroupBuyController {
     public PageResponse<GroupBuyResponse> myGroupBuys(@AuthenticationPrincipal UserDetails me,
                                                       @PageableDefault(size = 10) Pageable pageable) {
         return service.farmerGroupBuys(me.getUsername(), pageable);
+    }
+
+    /** 我名下的團購整單列表 */
+    @GetMapping("/group-buy-orders")
+    public PageResponse<GroupBuyOrderResponse> myGroupBuyOrders(@AuthenticationPrincipal UserDetails me,
+                                                                @PageableDefault(size = 10) Pageable pageable) {
+        return service.farmerGroupBuyOrders(me.getUsername(), pageable);
+    }
+
+    /** 取得某團購的整單明細（含參與者清單） */
+    @GetMapping("/group-buys/{id}/order")
+    public GroupBuyOrderResponse getGroupBuyOrder(@AuthenticationPrincipal UserDetails me,
+                                                  @PathVariable Long id) {
+        return service.getGroupBuyOrder(me.getUsername(), id);
+    }
+
+    /** 標記某團員 participation 已出貨 */
+    @PostMapping("/group-buys/{id}/participations/{pid}/ship")
+    public ParticipationResponse markShipped(@AuthenticationPrincipal UserDetails me,
+                                             @PathVariable Long id,
+                                             @PathVariable Long pid) {
+        return service.markParticipationShipped(me.getUsername(), id, pid);
     }
 }

@@ -37,9 +37,6 @@ public class OrderResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    /** 若此單來自團購,標示 groupBuyId(前端可加 badge);一般訂單為 null */
-    private Long groupBuyId;
-
     private List<OrderItemResponse> items;
 
     public static OrderResponse from(Order o) {
@@ -60,7 +57,6 @@ public class OrderResponse {
                 .paidAt(o.getPaidAt())
                 .createdAt(o.getCreatedAt())
                 .updatedAt(o.getUpdatedAt())
-                .groupBuyId(o.getGroupBuy() != null ? o.getGroupBuy().getId() : null)
                 .items(o.getItems().stream().map(OrderItemResponse::from).toList())
                 .build();
     }

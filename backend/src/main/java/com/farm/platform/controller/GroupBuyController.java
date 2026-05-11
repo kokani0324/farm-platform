@@ -6,7 +6,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -71,5 +70,28 @@ public class GroupBuyController {
     public PageResponse<ParticipationResponse> myParticipations(@AuthenticationPrincipal UserDetails me,
                                                                 @PageableDefault(size = 10) Pageable pageable) {
         return service.myParticipations(me.getUsername(), pageable);
+    }
+
+    /** 團員：標記自己已收貨 */
+    @PostMapping("/{id}/participations/mine/receipt")
+    public ParticipationResponse markMyReceipt(@AuthenticationPrincipal UserDetails me,
+                                               @PathVariable Long id) {
+        return service.markMyReceiptReceived(me.getUsername(), id);
+    }
+
+    /* ===== 團主：整單 ===== */
+
+    /** 團主、小農、團員：查看某團購的整單 */
+    @GetMapping("/{id}/order")
+    public GroupBuyOrderResponse getOrder(@AuthenticationPrincipal UserDetails me,
+                                          @PathVariable Long id) {
+        return service.getGroupBuyOrder(me.getUsername(), id);
+    }
+
+    /** 團主：列出我發起並成團的整單 */
+    @GetMapping("/orders/mine")
+    public PageResponse<GroupBuyOrderResponse> myHostedOrders(@AuthenticationPrincipal UserDetails me,
+                                                              @PageableDefault(size = 10) Pageable pageable) {
+        return service.myHostedOrders(me.getUsername(), pageable);
     }
 }

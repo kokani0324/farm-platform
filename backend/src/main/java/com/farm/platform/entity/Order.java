@@ -15,7 +15,6 @@ import java.util.List;
         @Index(name = "idx_order_consumer", columnList = "consumer_id"),
         @Index(name = "idx_order_farmer", columnList = "farmer_id"),
         @Index(name = "idx_order_status", columnList = "status"),
-        @Index(name = "idx_order_groupbuy", columnList = "group_buy_id"),
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Order {
@@ -68,11 +67,6 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();
-
-    /** 若此訂單來自團購,記錄 groupBuy id;一般訂單為 null。 */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_buy_id")
-    private GroupBuy groupBuy;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
