@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新增 / 編輯商品｜小農工作台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="farmer" data-active-side="products">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">product form</span>
+          <h2 id="formTitle">新增商品</h2>
+          <p>請填寫商品資訊；按下儲存後會立即上架（除非你手動下架）。</p>
+        </div>
+        <a class="user-btn ghost" href="farmer-products.html">← 回列表</a>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <form id="form">
+          <div class="form-grid">
+            <label class="field"><span>商品名稱</span><input type="text" id="name" maxlength="100" required></label>
+            <label class="field"><span>商品分類</span><select id="categoryId" required></select></label>
+            <label class="field"><span>單價</span><input type="number" id="price" min="0.01" step="0.01" required></label>
+            <label class="field"><span>計價單位</span><input type="text" id="unit" maxlength="20" placeholder="例：斤 / 箱 / 公斤" required></label>
+            <label class="field"><span>庫存</span><input type="number" id="stock" min="0" required></label>
+            <label class="field"><span>產地</span><input type="text" id="origin" maxlength="100"></label>
+            <label class="field"><span>出貨方式</span><input type="text" id="shippingMethod" maxlength="50" placeholder="冷藏宅配 / 常溫 ..."></label>
+            <label class="field"><span>圖片網址</span><input type="url" id="imageUrl" maxlength="500" placeholder="https://..."></label>
+          </div>
+          <label class="field"><span>商品描述（最多 2000 字）</span><textarea id="description" maxlength="2000" style="min-height:120px"></textarea></label>
+          <label class="field" style="flex-direction:row;align-items:center;gap:10px">
+            <input type="checkbox" id="groupBuyEnabled"> <span>允許消費者對此商品發起團購</span>
+          </label>
+          <div class="action-row" style="justify-content:flex-end">
+            <a class="user-btn ghost" href="farmer-products.html">取消</a>
+            <button class="primary-button" type="submit" id="saveBtn">儲存商品</button>
+          </div>
+        </form>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = FarmerShell.escapeHtml;
+    const id = new URLSearchParams(location.search).get("id");
+    const isEdit = !!id;
+    document.getElementById("formTitle").textContent = isEdit ? "編輯商品" : "新增商品";
+
+    // 載入分類
+    try {
+      const cats = await NongAuth.request("/api/public/categories");
+      const sel = document.getElementById("categoryId");
+      sel.innerHTML = `<option value="">請選擇分類</option>` + cats.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+    } catch (e) { toast("分類載入失敗：" + e.message, true); }
+
+    // 編輯模式：載入
+    if (isEdit) {
+      try {
+        const p = await NongAuth.request(`/api/public/products/${id}`);
+        document.getElementById("name").value = p.name || "";
+        document.getElementById("categoryId").value = p.categoryId || "";
+        document.getElementById("price").value = p.price;
+        document.getElementById("unit").value = p.unit || "";
+        document.getElementById("stock").value = p.stock;
+        document.getElementById("origin").value = p.origin || "";
+        document.getElementById("shippingMethod").value = p.shippingMethod || "";
+        document.getElementById("imageUrl").value = p.imageUrl || "";
+        document.getElementById("description").value = p.description || "";
+        document.getElementById("groupBuyEnabled").checked = !!p.groupBuyEnabled;
+      } catch (e) { toast("商品載入失敗：" + e.message, true); }
+    }
+
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById("name").value.trim(),
+        description: document.getElementById("description").value.trim() || null,
+        price: Number(document.getElementById("price").value),
+        unit: document.getElementById("unit").value.trim(),
+        stock: Number(document.getElementById("stock").value),
+        origin: document.getElementById("origin").value.trim() || null,
+        shippingMethod: document.getElementById("shippingMethod").value.trim() || null,
+        imageUrl: document.getElementById("imageUrl").value.trim() || null,
+        groupBuyEnabled: document.getElementById("groupBuyEnabled").checked,
+        categoryId: Number(document.getElementById("categoryId").value) || null
+      };
+      const btn = document.getElementById("saveBtn");
+      btn.disabled = true; btn.textContent = "儲存中…";
+      try {
+        const url = isEdit ? `/api/farmer/products/${id}` : "/api/farmer/products";
+        const method = isEdit ? "PUT" : "POST";
+        await NongAuth.request(url, { method, body: JSON.stringify(payload) });
+        toast("已儲存");
+        setTimeout(() => location.href = "farmer-products.html", 600);
+      } catch (err) { toast(err.message || "儲存失敗", true); btn.disabled = false; btn.textContent = "儲存商品"; }
+    });
+
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

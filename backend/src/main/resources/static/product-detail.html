@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品詳情｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="products">
+  <div id="headerHost"></div>
+  <main id="detailView">
+    <p style="text-align:center;color:var(--muted);padding:48px 0;">載入中…</p>
+  </main>
+
+  <!-- 發起團購 modal -->
+  <div class="modal-backdrop" id="groupBuyModal">
+    <div class="modal-card">
+      <h2>發起團購</h2>
+      <p style="color:var(--muted);margin:4px 0 16px">設定目標數量、團購價與截止時間，送出後由小農審核。</p>
+      <form id="groupBuyForm">
+        <div class="form-grid">
+          <label class="field"><span>目標數量（≥2）</span><input type="number" min="2" id="gbTarget" required></label>
+          <label class="field"><span>團購價 / 單位</span><input type="number" min="1" step="0.01" id="gbPrice" required></label>
+          <label class="field"><span>開團時間</span><input type="datetime-local" id="gbOpen" required></label>
+          <label class="field"><span>截止時間</span><input type="datetime-local" id="gbDeadline" required></label>
+        </div>
+        <label class="field"><span>給小農的訊息（選填）</span><textarea id="gbMessage" maxlength="500"></textarea></label>
+        <div class="modal-foot">
+          <button class="user-btn ghost" type="button" data-close-modal>取消</button>
+          <button class="primary-button" type="submit">送出申請</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links">
+      <a href="products.html">逛商品</a><a href="group-buys.html">團購</a>
+    </div>
+  </footer>
+  <div class="toast-flash" id="toast"></div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/header.js"></script>
+  <script src="js/product-detail.js"></script>
+</body>
+</html>

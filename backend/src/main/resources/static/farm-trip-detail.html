@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>體驗活動詳情｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="farm-trips">
+  <div id="headerHost"></div>
+  <main id="tripView">
+    <p style="text-align:center;color:var(--muted);padding:48px 0;">載入中…</p>
+  </main>
+
+  <div class="modal-backdrop" id="bookModal">
+    <div class="modal-card">
+      <h2>預約體驗活動</h2>
+      <p style="color:var(--muted);margin:4px 0 16px">填寫聯絡資訊與人數，平台會通知小農。</p>
+      <form id="bookForm">
+        <div class="form-grid">
+          <label class="field"><span>聯絡人姓名</span><input type="text" id="contactName" maxlength="50" required></label>
+          <label class="field"><span>聯絡電話</span><input type="text" id="contactPhone" maxlength="20" required></label>
+        </div>
+        <label class="field"><span>人數</span><input type="number" id="numPeople" min="1" max="99" value="1" required></label>
+        <label class="field"><span>備註（選填）</span><textarea id="note" maxlength="500"></textarea></label>
+        <div class="modal-foot">
+          <button class="user-btn ghost" type="button" data-close-modal>取消</button>
+          <button class="primary-button" type="submit">送出預約</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="farm-trips.html">回活動列表</a><a href="my-farm-trip-bookings.html">我的預約</a></div>
+  </footer>
+  <div class="toast-flash" id="toast"></div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/header.js"></script>
+  <script src="js/farm-trip-detail.js"></script>
+</body>
+</html>

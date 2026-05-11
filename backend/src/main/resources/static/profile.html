@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>會員中心｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="">
+  <div id="headerHost"></div>
+  <section class="page-header">
+    <span class="eyebrow">profile</span>
+    <h1>會員中心</h1>
+    <p>查看你的帳號資訊與快速進入個人功能。</p>
+  </section>
+  <main class="detail-body">
+    <div class="detail-layout" id="profileBody">
+      <section class="panel-card">
+        <h3>帳號資訊</h3>
+        <div id="info"><p style="color:var(--muted)">載入中…</p></div>
+      </section>
+      <section class="panel-card">
+        <h3>快速連結</h3>
+        <div class="task-list" id="quickLinks"></div>
+      </section>
+    </div>
+  </main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="index.html">回首頁</a></div>
+  </footer>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (function () {
+    const esc = NongHeader.escapeHtml;
+    const user = NongAuth.getConsumerUser();
+    if (!user) { location.href = "login.html?reason=auth"; return; }
+    const role = user.activeRole || user.role;
+    const roleLabel = role === "FARMER" ? "小農" : role === "ADMIN" ? "管理員" : "消費者";
+
+    document.getElementById("info").innerHTML = `
+      <table class="cart-table" style="margin:0">
+        <tbody>
+          <tr><th>姓名</th><td>${esc(user.name || "")}</td></tr>
+          <tr><th>Email</th><td>${esc(user.email || "")}</td></tr>
+          <tr><th>當前身份</th><td><span class="status-tag success">${esc(roleLabel)}</span></td></tr>
+          <tr><th>擁有身份</th><td>${(user.roles || []).map((r) => `<span class="status-tag" style="margin-right:6px">${esc(r)}</span>`).join("")}</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--muted);font-size:13px;margin-top:14px">會員資料編輯功能（改名、改密碼等）尚未實作，將於下一輪補上。</p>
+    `;
+
+    const links = [];
+    if (role === "CONSUMER") {
+      links.push(["我的訂單", "orders.html"]);
+      links.push(["我發起的團購", "my-group-buy-requests.html"]);
+      links.push(["我參加的團購", "my-group-buys.html"]);
+      links.push(["我的團購整單", "my-group-buy-orders.html"]);
+      links.push(["我的體驗預約", "my-farm-trip-bookings.html"]);
+      links.push(["我的文章", "my-blogs.html"]);
+    }
+    if (role === "FARMER") { links.push(["小農工作台", "farmer.html"]); links.push(["我的文章", "my-blogs.html"]); }
+    if (role === "ADMIN")  { links.push(["管理員後台", "admin.html"]); }
+    document.getElementById("quickLinks").innerHTML = links.map((l) => `<a class="side-link" href="${l[1]}" style="display:block">${esc(l[0])} →</a>`).join("");
+  })();
+  </script>
+</body>
+</html>

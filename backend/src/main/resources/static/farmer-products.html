@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品管理｜小農工作台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="farmer" data-active-side="products">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">products</span>
+          <h2>商品管理</h2>
+          <p>上下架、修改、刪除你自己的商品。資料由 GET /api/farmer/products 載入。</p>
+        </div>
+        <a class="primary-button" href="farmer-product-form.html">+ 新增商品</a>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table" id="table">
+          <thead>
+            <tr><th>商品</th><th>分類</th><th>價格</th><th>庫存</th><th>狀態</th><th>操作</th></tr>
+          </thead>
+          <tbody id="rows"><tr><td colspan="6" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = FarmerShell.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const rows = document.getElementById("rows");
+    await reload();
+    document.addEventListener("click", async (e) => {
+      const toggleBtn = e.target.closest("[data-toggle]");
+      if (toggleBtn) {
+        try { await NongAuth.request(`/api/farmer/products/${toggleBtn.dataset.toggle}/toggle-status`, { method: "PATCH" }); toast("狀態已切換"); await reload(); }
+        catch (err) { toast(err.message || "失敗", true); }
+        return;
+      }
+      const delBtn = e.target.closest("[data-del]");
+      if (delBtn) {
+        if (!confirm("確定刪除這個商品嗎？")) return;
+        try { await NongAuth.request(`/api/farmer/products/${delBtn.dataset.del}`, { method: "DELETE" }); toast("已刪除"); await reload(); }
+        catch (err) { toast(err.message || "刪除失敗", true); }
+      }
+    });
+
+    async function reload() {
+      try {
+        const list = await NongAuth.request("/api/farmer/products");
+        if (!list.length) {
+          rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted)">還沒有商品。<a href="farmer-product-form.html" style="color:var(--leaf);margin-left:8px">+ 新增第一個</a></td></tr>`;
+          return;
+        }
+        rows.innerHTML = list.map((p) => `
+          <tr>
+            <td><strong>${esc(p.name)}</strong><div style="color:var(--muted);font-size:12px">${esc(p.origin || "")} ${p.shippingMethod ? " ｜ " + esc(p.shippingMethod) : ""}</div></td>
+            <td>${esc(p.categoryName || "")}</td>
+            <td>${currency(p.price)} / ${esc(p.unit || "")}</td>
+            <td>${p.stock}</td>
+            <td><span class="status ${p.status === "ACTIVE" ? "" : "warning"}">${esc(p.status)}</span></td>
+            <td>
+              <a class="user-btn ghost" href="farmer-product-form.html?id=${p.id}">編輯</a>
+              <button class="user-btn ghost" data-toggle="${p.id}">${p.status === "ACTIVE" ? "下架" : "上架"}</button>
+              <button class="user-btn ghost" data-del="${p.id}" style="color:var(--clay)">刪除</button>
+            </td>
+          </tr>
+        `).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

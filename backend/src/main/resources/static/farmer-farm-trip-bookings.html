@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>體驗預約管理｜小農工作台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="farmer" data-active-side="trip-bookings">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">trip bookings</span>
+          <h2>體驗預約管理</h2>
+          <p>消費者對你舉辦的活動的預約紀錄。</p>
+        </div>
+        <div class="action-row">
+          <button class="user-btn ghost" data-filter="">全部</button>
+          <button class="user-btn ghost" data-filter="BOOKED">已預約</button>
+          <button class="user-btn ghost" data-filter="CONFIRMED">已確認</button>
+          <button class="user-btn ghost" data-filter="CANCELLED">已取消</button>
+          <button class="user-btn ghost" data-filter="COMPLETED">已完成</button>
+        </div>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>編號</th><th>活動</th><th>聯絡人</th><th>人數</th><th>金額</th><th>狀態</th><th>預約時間</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="7" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = FarmerShell.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+    const rows = document.getElementById("rows");
+    let currentFilter = "";
+
+    await reload();
+    document.querySelectorAll("[data-filter]").forEach((btn) => btn.addEventListener("click", async () => {
+      currentFilter = btn.dataset.filter; await reload();
+    }));
+
+    async function reload() {
+      try {
+        const url = "/api/farmer/farm-trip-bookings?size=30" + (currentFilter ? `&status=${currentFilter}` : "");
+        const page = await NongAuth.request(url);
+        const list = page.content || [];
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted)">沒有符合的預約。</td></tr>`; return; }
+        rows.innerHTML = list.map((b) => `
+          <tr>
+            <td><strong>${esc(b.bookingNo || "")}</strong></td>
+            <td>${esc(b.farmTripTitle || "")}<div style="color:var(--muted);font-size:12px">${fmt(b.farmTripStart)}</div></td>
+            <td>${esc(b.contactName || "")}<div style="color:var(--muted);font-size:12px">${esc(b.contactPhone || "")}</div></td>
+            <td>${b.numPeople || 0}</td>
+            <td>${currency(b.totalAmount || 0)}</td>
+            <td><span class="status ${b.status === "CANCELLED" ? "warning" : ""}">${esc(b.status)}</span></td>
+            <td>${fmt(b.bookedAt)}</td>
+          </tr>
+        `).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+  })();
+  </script>
+</body>
+</html>

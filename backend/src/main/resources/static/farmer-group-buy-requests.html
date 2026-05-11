@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>團購審核｜小農工作台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="farmer" data-active-side="gb-requests">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">group buy requests</span>
+          <h2>團購審核</h2>
+          <p>消費者向你提出的團購申請。通過後會立刻開放給其他人加入。</p>
+        </div>
+        <div class="action-row">
+          <button class="user-btn ghost" data-filter="">全部</button>
+          <button class="user-btn ghost" data-filter="PENDING">待審核</button>
+          <button class="user-btn ghost" data-filter="APPROVED">已通過</button>
+          <button class="user-btn ghost" data-filter="REJECTED">已退回</button>
+        </div>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>商品</th><th>團主</th><th>目標數量</th><th>團購價</th><th>截止</th><th>狀態</th><th>操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="7" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = FarmerShell.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+    const rows = document.getElementById("rows");
+    let currentFilter = "";
+
+    await reload();
+    document.querySelectorAll("[data-filter]").forEach((btn) => btn.addEventListener("click", async () => {
+      currentFilter = btn.dataset.filter;
+      await reload();
+    }));
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-review]");
+      if (!btn) return;
+      const id = btn.dataset.review;
+      const approved = btn.dataset.approve === "1";
+      const rejectReason = approved ? null : (prompt("退回原因？") || "規格不符");
+      try {
+        await NongAuth.request(`/api/farmer/group-buy-requests/${id}/review`, {
+          method: "POST", body: JSON.stringify({ approved, rejectReason })
+        });
+        toast(approved ? "已通過並開團" : "已退回");
+        await reload();
+      } catch (err) { toast(err.message || "送出失敗", true); }
+    });
+
+    async function reload() {
+      try {
+        const url = "/api/farmer/group-buy-requests?size=30" + (currentFilter ? `&status=${currentFilter}` : "");
+        const page = await NongAuth.request(url);
+        const list = page.content || [];
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted)">沒有符合的請求。</td></tr>`; return; }
+        rows.innerHTML = list.map((r) => {
+          const isPending = r.status === "PENDING";
+          return `
+            <tr>
+              <td><strong>${esc(r.productName || "")}</strong></td>
+              <td>${esc(r.hostName || "")}</td>
+              <td>${r.targetQuantity || "—"}</td>
+              <td>${currency(r.groupPrice)} <small style="color:var(--muted)">/ 原價 ${currency(r.productPrice)}</small></td>
+              <td>${fmt(r.deadlineDate)}</td>
+              <td><span class="status ${r.status === "APPROVED" ? "" : "warning"}">${esc(r.status)}</span></td>
+              <td>
+                ${isPending ? `
+                  <button class="user-btn primary" data-review="${r.id}" data-approve="1" style="background:var(--leaf);color:#fff;border-color:var(--leaf)">通過</button>
+                  <button class="user-btn ghost"   data-review="${r.id}" data-approve="0" style="color:var(--clay)">退回</button>
+                ` : ""}
+                ${r.groupBuyId ? `<a class="user-btn ghost" href="group-buy-detail.html?id=${r.groupBuyId}">看團</a>` : ""}
+              </td>
+            </tr>
+          `;
+        }).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

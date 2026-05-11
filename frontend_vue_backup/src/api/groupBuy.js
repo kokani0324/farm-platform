@@ -20,10 +20,27 @@ export const withdrawGroupBuy = (id) =>
 export const listMyParticipations = (params = {}) =>
   http.get('/api/group-buys/participations/mine', { params })
 
-/* ====== 小農:審核 / 我的團購 ====== */
+/* ====== 消費者:標記收貨 ====== */
+export const markMyReceipt = (groupBuyId) =>
+  http.post(`/api/group-buys/${groupBuyId}/participations/mine/receipt`)
+
+/* ====== 團購整單(GroupBuyOrder) ====== */
+export const getGroupBuyOrder = (groupBuyId) =>
+  http.get(`/api/group-buys/${groupBuyId}/order`)
+export const listMyHostedOrders = (params = {}) =>
+  http.get('/api/group-buys/orders/mine', { params })
+
+/* ====== 小農:審核 / 我的團購 / 出貨 ====== */
 export const listFarmerGroupBuyRequests = (params = {}) =>
   http.get('/api/farmer/group-buy-requests', { params })
 export const reviewGroupBuyRequest = (id, payload) =>
   http.post(`/api/farmer/group-buy-requests/${id}/review`, payload)
 export const listFarmerGroupBuys = (params = {}) =>
   http.get('/api/farmer/group-buys', { params })
+
+export const listFarmerGroupBuyOrders = (params = {}) =>
+  http.get('/api/farmer/group-buy-orders', { params })
+export const getFarmerGroupBuyOrder = (groupBuyId) =>
+  http.get(`/api/farmer/group-buys/${groupBuyId}/order`)
+export const markParticipationShipped = (groupBuyId, participationId) =>
+  http.post(`/api/farmer/group-buys/${groupBuyId}/participations/${participationId}/ship`)

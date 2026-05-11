@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的文章｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="">
+  <div id="headerHost"></div>
+  <section class="page-header">
+    <span class="eyebrow">my blogs</span>
+    <h1>我的文章</h1>
+    <p>已發表的文章；按下按鈕可以前往編輯或新增。</p>
+  </section>
+  <div class="toolbar"><div></div><a class="primary-button" href="blog-form.html">+ 新增文章</a></div>
+  <main class="detail-body" id="listView"><p style="text-align:center;color:var(--muted);padding:48px 0;">載入中…</p></main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="blogs.html">看公開文章</a></div>
+  </footer>
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (async function () {
+    const esc = NongHeader.escapeHtml;
+    const view = document.getElementById("listView");
+    if (!NongAuth.getConsumerUser()) { location.href = "login.html?reason=auth"; return; }
+    await reload();
+
+    async function reload() {
+      try {
+        const page = await NongAuth.request("/api/blogs/mine?size=30");
+        const list = page.content || [];
+        if (!list.length) { view.innerHTML = `<div class="empty-state">還沒有發表文章。<a class="primary-button" href="blog-form.html" style="margin-left:8px">+ 寫第一篇</a></div>`; return; }
+        view.innerHTML = `
+          <table class="cart-table">
+            <thead><tr><th>標題</th><th>分類</th><th>狀態</th><th>瀏覽</th><th>讚</th><th>留言</th><th></th></tr></thead>
+            <tbody>${list.map((b) => `
+              <tr>
+                <td><a href="blog-detail.html?id=${b.id}" style="color:var(--leaf);font-weight:600">${esc(b.title || "")}</a></td>
+                <td>${esc(b.blogTypeName || "")}</td>
+                <td><span class="status-tag ${b.status === "PUBLISHED" ? "success" : "warning"}">${esc(b.status || "")}</span></td>
+                <td>${b.viewCount || 0}</td>
+                <td>${b.likeCount || 0}</td>
+                <td>${b.commentCount || 0}</td>
+                <td>
+                  <a class="user-btn ghost" href="blog-form.html?id=${b.id}">編輯</a>
+                  <button class="user-btn ghost" data-del="${b.id}" style="color:var(--clay)">刪除</button>
+                </td>
+              </tr>
+            `).join("")}</tbody>
+          </table>
+        `;
+        document.querySelectorAll("[data-del]").forEach((btn) => btn.addEventListener("click", async () => {
+          if (!confirm("確定要刪除這篇文章嗎？")) return;
+          try { await NongAuth.request(`/api/blogs/${btn.dataset.del}`, { method: "DELETE" }); toast("已刪除"); await reload(); }
+          catch (e) { toast(e.message || "刪除失敗", true); }
+        }));
+      } catch (e) { view.innerHTML = `<div class="empty-state">載入失敗：${esc(e.message)}</div>`; }
+    }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的團購整單｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="">
+  <div id="headerHost"></div>
+  <section class="page-header">
+    <span class="eyebrow">my hosted orders</span>
+    <h1>我發起並成團的整單</h1>
+    <p>由你開團、達標成立的訂單彙整，可查看出貨進度。</p>
+  </section>
+  <main class="detail-body" id="listView"><p style="text-align:center;color:var(--muted);padding:48px 0;">載入中…</p></main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="group-buys.html">看公開團購</a></div>
+  </footer>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (async function () {
+    const esc = NongHeader.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const view = document.getElementById("listView");
+    if (!NongAuth.getConsumerUser()) { location.href = "login.html?reason=auth"; return; }
+    try {
+      const page = await NongAuth.request("/api/group-buys/orders/mine?size=30");
+      const list = page.content || [];
+      if (!list.length) { view.innerHTML = `<div class="empty-state">還沒有成團的整單。</div>`; return; }
+      view.innerHTML = `
+        <table class="cart-table">
+          <thead><tr><th>團購</th><th>商品</th><th>份數</th><th>總金額</th><th>狀態</th><th></th></tr></thead>
+          <tbody>${list.map((o) => `
+            <tr>
+              <td>#${esc(o.groupBuyId || "")}</td>
+              <td><strong>${esc(o.productName || "")}</strong></td>
+              <td>${o.totalQuantity || 0}</td>
+              <td>${currency(o.totalAmount || 0)}</td>
+              <td><span class="status-tag">${esc(o.status || "")}</span></td>
+              <td>${o.groupBuyId ? `<a class="user-btn ghost" href="group-buy-detail.html?id=${o.groupBuyId}">查看</a>` : ""}</td>
+            </tr>
+          `).join("")}</tbody>
+        </table>
+      `;
+    } catch (e) { view.innerHTML = `<div class="empty-state">載入失敗：${esc(e.message)}</div>`; }
+  })();
+  </script>
+</body>
+</html>

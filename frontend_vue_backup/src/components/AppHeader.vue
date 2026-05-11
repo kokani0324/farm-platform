@@ -27,6 +27,7 @@ const userOptions = computed(() => {
     items.push({ label: '我的訂單', key: 'orders', icon: () => h(NIcon, null, { default: () => h(ReceiptOutline) }) })
     items.push({ label: '我發起的團購', key: 'my-group-buy-requests', icon: () => h(NIcon, null, { default: () => h(FlashOutline) }) })
     items.push({ label: '我參加的團購', key: 'my-group-buys', icon: () => h(NIcon, null, { default: () => h(PeopleOutline) }) })
+    items.push({ label: '我的團購整單', key: 'my-group-buy-orders', icon: () => h(NIcon, null, { default: () => h(ReceiptOutline) }) })
     items.push({ label: '我的體驗預約', key: 'my-farm-trip-bookings', icon: () => h(NIcon, null, { default: () => h(CalendarOutline) }) })
   }
   if (auth.isFarmer) {
@@ -34,6 +35,7 @@ const userOptions = computed(() => {
     items.push({ label: '小農訂單', key: 'farmer-orders', icon: () => h(NIcon, null, { default: () => h(ReceiptOutline) }) })
     items.push({ label: '團購審核', key: 'farmer-group-buy-requests', icon: () => h(NIcon, null, { default: () => h(CheckmarkCircleOutline) }) })
     items.push({ label: '我的團購活動', key: 'farmer-group-buys', icon: () => h(NIcon, null, { default: () => h(FlashOutline) }) })
+    items.push({ label: '團購出貨管理', key: 'farmer-group-buy-orders', icon: () => h(NIcon, null, { default: () => h(ReceiptOutline) }) })
     items.push({ label: '我的體驗活動', key: 'farmer-farm-trips', icon: () => h(NIcon, null, { default: () => h(CompassOutline) }) })
     items.push({ label: '體驗預約管理', key: 'farmer-farm-trip-bookings', icon: () => h(NIcon, null, { default: () => h(CalendarOutline) }) })
   }
@@ -81,12 +83,16 @@ async function handleSelect(key) {
     router.push({ name: 'my-group-buy-requests' })
   } else if (key === 'my-group-buys') {
     router.push({ name: 'my-group-buys' })
+  } else if (key === 'my-group-buy-orders') {
+    router.push({ name: 'my-group-buy-orders' })
   } else if (key === 'my-farm-trip-bookings') {
     router.push({ name: 'my-farm-trip-bookings' })
   } else if (key === 'farmer-group-buy-requests') {
     router.push({ name: 'farmer-group-buy-requests' })
   } else if (key === 'farmer-group-buys') {
     router.push({ name: 'farmer-group-buys' })
+  } else if (key === 'farmer-group-buy-orders') {
+    router.push({ name: 'farmer-group-buy-orders' })
   } else if (key === 'farmer-farm-trips') {
     router.push({ name: 'farmer-farm-trips' })
   } else if (key === 'farmer-farm-trip-bookings') {

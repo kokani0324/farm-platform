@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品管理｜管理員後台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="admin" data-active-side="products">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout admin-tone">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">products</span>
+          <h2>商品管理</h2>
+          <p>所有小農上架的商品。發現違規可以直接下架，事後仍可復原。</p>
+        </div>
+        <form class="search" id="searchForm" role="search">
+          <input type="search" id="keyword" placeholder="搜尋商品 / 小農…" aria-label="搜尋">
+          <button class="secondary-button" type="submit">搜尋</button>
+        </form>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>商品</th><th>小農</th><th>分類</th><th>價格</th><th>庫存</th><th>狀態</th><th>操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="7" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/admin-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = AdminShell.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const rows = document.getElementById("rows");
+    let currentKeyword = "";
+
+    await reload();
+    document.getElementById("searchForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      currentKeyword = document.getElementById("keyword").value.trim();
+      await reload();
+    });
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const action = btn.dataset.action; // take-down / restore
+      if (action === "take-down" && !confirm("確定要下架這個商品嗎？小農會看到狀態變為 INACTIVE。")) return;
+      try {
+        await NongAuth.request(`/api/admin/products/${id}/${action}`, { method: "POST" });
+        toast(action === "take-down" ? "已下架" : "已復原");
+        await reload();
+      } catch (err) { toast(err.message || "操作失敗", true); }
+    });
+
+    async function reload() {
+      try {
+        const url = "/api/admin/products?size=30" + (currentKeyword ? `&keyword=${encodeURIComponent(currentKeyword)}` : "");
+        const page = await NongAuth.request(url);
+        const list = page.content || [];
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted)">沒有符合的商品。</td></tr>`; return; }
+        rows.innerHTML = list.map((p) => `
+          <tr>
+            <td>
+              <strong>${esc(p.name)}</strong>
+              <div style="color:var(--muted);font-size:12px">${esc(p.origin || "")} ${p.shippingMethod ? " ｜ " + esc(p.shippingMethod) : ""}</div>
+            </td>
+            <td>${esc(p.farmerName || "")}</td>
+            <td>${esc(p.categoryName || "")}</td>
+            <td>${currency(p.price)} / ${esc(p.unit || "")}</td>
+            <td>${p.stock}</td>
+            <td><span class="status ${p.status === "ACTIVE" ? "" : "warning"}">${esc(p.status)}</span></td>
+            <td>
+              <a class="user-btn ghost" href="product-detail.html?id=${p.id}" target="_blank">預覽</a>
+              ${p.status === "ACTIVE"
+                ? `<button class="user-btn ghost" data-action="take-down" data-id="${p.id}" style="color:var(--clay)">下架</button>`
+                : `<button class="user-btn ghost" data-action="restore" data-id="${p.id}">復原</button>`
+              }
+            </td>
+          </tr>
+        `).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小農工作台｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="farmer" data-active-side="dashboard">
+  <div id="headerHost"></div>
+
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">farmer console</span>
+          <h2>把今天要處理的事情排好。</h2>
+          <p>商品上下架、庫存、出貨、團購、體驗活動都集中在同一個後台。</p>
+        </div>
+        <a class="primary-button" href="farmer-product-form.html">+ 新增商品</a>
+      </div>
+
+      <div class="metric-row" id="metrics">
+        <article><span>商品總數</span><strong id="mProducts">—</strong></article>
+        <article><span>待出貨訂單</span><strong id="mPendingOrders">—</strong></article>
+        <article><span>待審團購</span><strong id="mPendingGB">—</strong></article>
+        <article><span>本月活動預約</span><strong id="mBookings">—</strong></article>
+      </div>
+
+      <section class="panel-grid">
+        <article class="panel-card is-large">
+          <div class="panel-title">
+            <h3>最近訂單</h3>
+            <a class="secondary-button" href="farmer-orders.html">看全部</a>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>訂單編號</th><th>消費者</th><th>金額</th><th>狀態</th><th>建立時間</th></tr></thead>
+            <tbody id="recentOrders"><tr><td colspan="5" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+          </table>
+        </article>
+
+        <article class="panel-card">
+          <h3>快速導覽</h3>
+          <div class="task-list">
+            <a href="farmer-products.html" class="side-link" style="display:block">商品管理 →</a>
+            <a href="farmer-orders.html" class="side-link" style="display:block">訂單管理 →</a>
+            <a href="farmer-group-buy-requests.html" class="side-link" style="display:block">團購審核 →</a>
+            <a href="farmer-farm-trips.html" class="side-link" style="display:block">體驗活動管理 →</a>
+            <a href="farmer-farm-trip-bookings.html" class="side-link" style="display:block">體驗預約管理 →</a>
+          </div>
+        </article>
+
+        <article class="panel-card">
+          <h3>提醒</h3>
+          <p style="color:var(--muted)">右上角頭像可以登出。離開後台分頁會自動清除登入狀態。</p>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function loadDashboard() {
+    if (!NongAuth.getBackofficeUser()) return; // shell 已經導走了
+    try {
+      const [products, ordersPage, gbRequests, bookings] = await Promise.all([
+        NongAuth.request("/api/farmer/products").catch(() => []),
+        NongAuth.request("/api/orders/farmer?size=5").catch(() => ({ content: [], totalElements: 0 })),
+        NongAuth.request("/api/farmer/group-buy-requests?status=PENDING&size=1").catch(() => ({ totalElements: 0 })),
+        NongAuth.request("/api/farmer/farm-trip-bookings?size=1").catch(() => ({ totalElements: 0 }))
+      ]);
+
+      document.getElementById("mProducts").textContent = (products || []).length;
+      document.getElementById("mPendingOrders").textContent = (ordersPage.content || []).filter(o => o.status === "PAID" || o.status === "PENDING_PAYMENT").length;
+      document.getElementById("mPendingGB").textContent = gbRequests.totalElements || 0;
+      document.getElementById("mBookings").textContent = bookings.totalElements || 0;
+
+      const tbody = document.getElementById("recentOrders");
+      const list = ordersPage.content || [];
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted)">還沒收到訂單。</td></tr>`;
+        return;
+      }
+      const STATUS = {
+        PENDING_PAYMENT: "待付款", PAID: "已付款", SHIPPED: "已出貨",
+        COMPLETED: "已完成", CANCELLED: "已取消"
+      };
+      const esc = FarmerShell.escapeHtml;
+      const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+      tbody.innerHTML = list.map((o) => `
+        <tr>
+          <td><a href="order-detail.html?id=${o.id}" style="color:var(--leaf)">${esc(o.orderNo)}</a></td>
+          <td>${esc(o.consumerName || "")}</td>
+          <td>NT$ ${Number(o.totalAmount).toLocaleString("zh-TW")}</td>
+          <td><span class="status">${esc(STATUS[o.status] || o.status)}</span></td>
+          <td>${fmt(o.createdAt)}</td>
+        </tr>
+      `).join("");
+    } catch (e) { console.warn("dashboard loadDashboard:", e); }
+  })();
+  </script>
+</body>
+</html>

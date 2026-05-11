@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>註冊｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="auth">
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="你儂我農首頁">
+      <span class="brand-seal">儂</span>
+      <span><strong>你儂我農</strong><small>from soil to table</small></span>
+    </a>
+    <nav class="utility-nav">
+      <a href="index.html">回到首頁</a>
+      <a href="login.html">已有帳號</a>
+    </nav>
+  </header>
+
+  <main class="auth-wrapper">
+    <section class="auth-card">
+      <span class="eyebrow">create account</span>
+      <h1>建立你的帳號</h1>
+      <p class="auth-foot" style="text-align:left;margin:0 0 18px">小農註冊後預設停用，須由管理員啟用方可登入後台。</p>
+
+      <div class="auth-tabs" role="tablist">
+        <button type="button" data-role="CONSUMER" class="is-active">註冊為消費者</button>
+        <button type="button" data-role="FARMER">註冊為小農</button>
+      </div>
+
+      <div class="auth-error" id="registerError"></div>
+
+      <form id="registerForm" novalidate>
+        <input type="hidden" name="role" id="regRole" value="CONSUMER">
+        <label class="field">
+          <span>姓名</span>
+          <input type="text" id="regName" required>
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="regEmail" required autocomplete="email">
+        </label>
+        <label class="field">
+          <span>密碼（6-50 字元）</span>
+          <input type="password" id="regPassword" minlength="6" maxlength="50" required autocomplete="new-password">
+        </label>
+        <label class="field">
+          <span>電話（選填）</span>
+          <input type="text" id="regPhone" maxlength="20">
+        </label>
+        <button class="primary-button" type="submit">建立帳號</button>
+      </form>
+
+      <p class="auth-foot">已經有帳號？<a href="login.html">登入</a></p>
+    </section>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script>
+    (function initRegisterPage() {
+      const errorBox = document.getElementById("registerError");
+      const tabs = document.querySelectorAll(".auth-tabs button");
+      const roleInput = document.getElementById("regRole");
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((t) => t.classList.remove("is-active"));
+          tab.classList.add("is-active");
+          roleInput.value = tab.dataset.role;
+        });
+      });
+
+      function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.classList.add("is-visible");
+      }
+
+      document.getElementById("registerForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorBox.classList.remove("is-visible");
+        const payload = {
+          name: document.getElementById("regName").value.trim(),
+          email: document.getElementById("regEmail").value.trim(),
+          password: document.getElementById("regPassword").value,
+          phone: document.getElementById("regPhone").value.trim() || null,
+          role: roleInput.value
+        };
+        if (!payload.name || !payload.email || !payload.password) {
+          showError("姓名、Email、密碼皆為必填"); return;
+        }
+        try {
+          const auth = await NongAuth.register(payload);
+          if (payload.role === "FARMER") {
+            // 小農預設 disabled，先導去 login 並提示
+            alert("註冊成功！小農帳號需由管理員啟用後才能登入。");
+            window.location.href = "login.html";
+            return;
+          }
+          NongAuth.saveSession(auth);
+          NongAuth.redirectAfterLogin(auth);
+        } catch (err) {
+          showError(err.message || "註冊失敗");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

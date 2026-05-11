@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我參加的團購｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="">
+  <div id="headerHost"></div>
+  <section class="page-header">
+    <span class="eyebrow">my participations</span>
+    <h1>我參加的團購</h1>
+    <p>列出你曾以團員身份加入過的團購，包含成團 / 未成團 / 已退出。</p>
+  </section>
+  <main class="detail-body" id="listView"><p style="text-align:center;color:var(--muted);padding:48px 0;">載入中…</p></main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="group-buys.html">看公開團購</a></div>
+  </footer>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (async function () {
+    const esc = NongHeader.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const view = document.getElementById("listView");
+    if (!NongAuth.getConsumerUser()) { location.href = "login.html?reason=auth"; return; }
+    try {
+      const page = await NongAuth.request("/api/group-buys/participations/mine?size=30");
+      const list = page.content || [];
+      if (!list.length) { view.innerHTML = `<div class="empty-state">還沒參加過任何團購。<a class="primary-button" href="group-buys.html" style="margin-left:8px">看公開團購</a></div>`; return; }
+      view.innerHTML = `
+        <table class="cart-table">
+          <thead><tr><th>團購商品</th><th>數量</th><th>單價</th><th>小計</th><th>狀態</th><th></th></tr></thead>
+          <tbody>${list.map((p) => `
+            <tr>
+              <td><strong>${esc(p.productName || "")}</strong><div style="color:var(--muted);font-size:12px">小農 ${esc(p.farmerName || "")}</div></td>
+              <td>${p.quantity || 0}</td>
+              <td>${currency(p.groupPrice || 0)}</td>
+              <td>${currency(p.subtotal || 0)}</td>
+              <td><span class="status-tag ${tagCls(p.status)}">${esc(p.status || "")}</span></td>
+              <td>${p.groupBuyId ? `<a class="user-btn ghost" href="group-buy-detail.html?id=${p.groupBuyId}">查看</a>` : ""}</td>
+            </tr>
+          `).join("")}</tbody>
+        </table>
+      `;
+    } catch (e) { view.innerHTML = `<div class="empty-state">載入失敗：${esc(e.message)}</div>`; }
+    function tagCls(s) { if (s === "JOINED") return ""; if (s === "SUCCESS") return "success"; if (s === "WITHDRAWN" || s === "FAILED") return "danger"; return "muted"; }
+  })();
+  </script>
+</body>
+</html>

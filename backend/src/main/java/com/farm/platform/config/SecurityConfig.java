@@ -34,6 +34,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // 靜態前端資源（多頁式靜態頁，所有 *.html / 靜態資產都放行）
+                        .requestMatchers(HttpMethod.GET,
+                                "/", "/*.html",
+                                "/css/**", "/js/**", "/images/**",
+                                "/favicon.ico", "/*.svg", "/*.png", "/*.jpg", "/*.webp", "/*.ico"
+                        ).permitAll()
                         // 公開端點：登入、註冊、商品瀏覽、團購瀏覽
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()

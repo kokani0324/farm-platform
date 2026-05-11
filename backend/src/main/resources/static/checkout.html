@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>結帳｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="">
+  <div id="headerHost"></div>
+
+  <section class="page-header">
+    <span class="eyebrow">checkout</span>
+    <h1>結帳</h1>
+    <p>請確認商品與寄送資訊；按下「確認下單」後系統會依小農自動拆單。</p>
+  </section>
+
+  <main class="detail-layout" id="checkoutView">
+    <p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 0;">載入中…</p>
+  </main>
+
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="cart.html">回購物車</a><a href="products.html">繼續逛商品</a></div>
+  </footer>
+  <div class="toast-flash" id="toast"></div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/header.js"></script>
+  <script src="js/checkout.js"></script>
+</body>
+</html>

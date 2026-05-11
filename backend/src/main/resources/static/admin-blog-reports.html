@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>檢舉處理｜管理員後台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="admin" data-active-side="blog-reports">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout admin-tone">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">moderation</span>
+          <h2>檢舉處理</h2>
+          <p>處理被檢舉的文章與留言；選「保留」代表不採信檢舉，選「隱藏」會把目標移除顯示。</p>
+        </div>
+      </div>
+
+      <div class="action-row" style="margin-bottom:14px">
+        <button class="user-btn primary" data-tab="blog">文章檢舉</button>
+        <button class="user-btn ghost"   data-tab="comment">留言檢舉</button>
+        <span style="margin-left:auto"></span>
+        <button class="user-btn ghost" data-filter="">全部</button>
+        <button class="user-btn ghost" data-filter="PENDING">待處理</button>
+        <button class="user-btn ghost" data-filter="KEEP">保留</button>
+        <button class="user-btn ghost" data-filter="HIDDEN">隱藏</button>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>#</th><th>目標</th><th>檢舉人</th><th>原因</th><th>狀態</th><th>建立</th><th>操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="7" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/admin-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = AdminShell.escapeHtml;
+    const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+    const rows = document.getElementById("rows");
+    let currentTab = "blog";      // blog | comment
+    let currentFilter = "";
+
+    await reload();
+    document.querySelectorAll("[data-tab]").forEach((btn) => btn.addEventListener("click", async () => {
+      currentTab = btn.dataset.tab;
+      document.querySelectorAll("[data-tab]").forEach((b) => {
+        b.classList.toggle("primary", b.dataset.tab === currentTab);
+        b.classList.toggle("ghost", b.dataset.tab !== currentTab);
+        if (b.dataset.tab === currentTab) { b.style.background = "var(--leaf)"; b.style.color = "#fff"; b.style.borderColor = "var(--leaf)"; }
+        else { b.style.background = ""; b.style.color = ""; b.style.borderColor = ""; }
+      });
+      await reload();
+    }));
+    document.querySelectorAll("[data-filter]").forEach((btn) => btn.addEventListener("click", async () => {
+      currentFilter = btn.dataset.filter;
+      await reload();
+    }));
+
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-handle]");
+      if (!btn) return;
+      const id = btn.dataset.handle;
+      const action = btn.dataset.act; // KEEP / HIDDEN
+      try {
+        const endpoint = currentTab === "blog"
+          ? `/api/admin/blog-reports/${id}/handle`
+          : `/api/admin/blog-comment-reports/${id}/handle`;
+        await NongAuth.request(endpoint, {
+          method: "POST", body: JSON.stringify({ action })
+        });
+        toast(action === "KEEP" ? "已保留目標" : "已隱藏目標");
+        await reload();
+      } catch (err) { toast(err.message || "操作失敗", true); }
+    });
+
+    async function reload() {
+      try {
+        const base = currentTab === "blog" ? "/api/admin/blog-reports" : "/api/admin/blog-comment-reports";
+        const url = base + "?size=30" + (currentFilter ? `&status=${currentFilter}` : "");
+        const page = await NongAuth.request(url);
+        const list = page.content || [];
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted)">沒有符合的檢舉。</td></tr>`; return; }
+        rows.innerHTML = list.map((r) => {
+          const targetLink = r.blogId
+            ? `<a href="blog-detail.html?id=${r.blogId}" target="_blank" style="color:var(--leaf)">${esc(truncate(r.targetTitleOrContent || "", 40))}</a>`
+            : esc(truncate(r.targetTitleOrContent || "", 40));
+          const isPending = r.status === "PENDING";
+          const statusLabel = r.status === "PENDING" ? "待處理" : r.status === "KEEP" ? "已保留" : "已隱藏";
+          return `
+            <tr>
+              <td>#${r.id}</td>
+              <td><span class="status ${r.targetType === "BLOG" ? "" : "warning"}">${r.targetType}</span> ${targetLink}</td>
+              <td>${esc(r.reporterName || "")}</td>
+              <td>${esc(truncate(r.reason || "", 60))}</td>
+              <td><span class="status ${isPending ? "warning" : ""}">${esc(statusLabel)}</span></td>
+              <td>${fmt(r.createdAt)}</td>
+              <td>
+                ${isPending ? `
+                  <button class="user-btn ghost" data-handle="${r.id}" data-act="KEEP">保留</button>
+                  <button class="user-btn ghost" data-handle="${r.id}" data-act="HIDDEN" style="color:var(--clay)">隱藏</button>
+                ` : `<span style="color:var(--muted);font-size:12px">${fmt(r.handledAt)} 由 ${esc(r.handlerName || "—")}</span>`}
+              </td>
+            </tr>
+          `;
+        }).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+    function truncate(s, n) { s = String(s).replace(/\s+/g, " "); return s.length > n ? s.slice(0, n) + "…" : s; }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

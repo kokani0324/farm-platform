@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我發起的團購｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="">
+  <div id="headerHost"></div>
+  <section class="page-header">
+    <span class="eyebrow">my group buy requests</span>
+    <h1>我發起的團購申請</h1>
+    <p>由你向小農發起、等待審核或已成立的團購記錄。</p>
+  </section>
+  <main class="detail-body" id="listView"><p style="text-align:center;color:var(--muted);padding:48px 0;">載入中…</p></main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="group-buys.html">看公開團購</a><a href="products.html">逛商品</a></div>
+  </footer>
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (async function () {
+    const esc = NongHeader.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const view = document.getElementById("listView");
+    if (!NongAuth.getConsumerUser()) { location.href = "login.html?reason=auth"; return; }
+    try {
+      const page = await NongAuth.request("/api/group-buys/requests/mine?size=30");
+      const list = page.content || [];
+      if (!list.length) { view.innerHTML = `<div class="empty-state">還沒發起過團購。<a class="primary-button" href="products.html" style="margin-left:8px">去找商品發起</a></div>`; return; }
+      view.innerHTML = `
+        <table class="cart-table">
+          <thead><tr><th>商品</th><th>目標數量</th><th>團購價</th><th>截止</th><th>狀態</th><th></th></tr></thead>
+          <tbody>${list.map((r) => `
+            <tr>
+              <td><strong>${esc(r.productName || "")}</strong></td>
+              <td>${r.targetQuantity || "—"}</td>
+              <td>${currency(r.groupPrice)}</td>
+              <td>${fmt(r.deadlineDate)}</td>
+              <td><span class="status-tag ${tagCls(r.status)}">${esc(r.status || "")}</span></td>
+              <td>${r.groupBuyId ? `<a class="user-btn ghost" href="group-buy-detail.html?id=${r.groupBuyId}">看團購</a>` : ""}</td>
+            </tr>
+          `).join("")}</tbody>
+        </table>
+      `;
+    } catch (e) { view.innerHTML = `<div class="empty-state">載入失敗：${esc(e.message)}</div>`; }
+    function fmt(iso) { if (!iso) return "—"; const d = new Date(iso); if (isNaN(d.getTime())) return iso; const p = (n) => String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}`; }
+    function tagCls(s) { if (s === "APPROVED" || s === "ACCEPTED") return "success"; if (s === "REJECTED" || s === "WITHDRAWN") return "danger"; return "warning"; }
+  })();
+  </script>
+</body>
+</html>

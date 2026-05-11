@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理員後台｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="admin" data-active-side="dashboard">
+  <div id="headerHost"></div>
+
+  <main class="dashboard-layout admin-tone">
+    <div id="sidebarHost"></div>
+
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">admin console</span>
+          <h2>平台營運總覽</h2>
+          <p>會員、商品、團購、體驗活動與檢舉處理的數據集中區。</p>
+        </div>
+      </div>
+
+      <div class="metric-row">
+        <article><span>總會員數</span><strong id="mUsers">—</strong></article>
+        <article><span>小農人數</span><strong id="mFarmers">—</strong></article>
+        <article><span>商品總數</span><strong id="mProducts">—</strong></article>
+        <article><span>待處理檢舉</span><strong id="mReports">—</strong></article>
+      </div>
+      <div class="metric-row">
+        <article><span>消費者</span><strong id="mConsumers">—</strong></article>
+        <article><span>停權帳號</span><strong id="mDisabled">—</strong></article>
+        <article><span>進行中團購</span><strong id="mOpenGB">—</strong></article>
+        <article><span>文章總數</span><strong id="mBlogs">—</strong></article>
+      </div>
+
+      <section class="panel-grid">
+        <article class="panel-card">
+          <h3>會員管理</h3>
+          <p>檢視所有會員、啟用/停權帳號。</p>
+          <a class="primary-button" href="admin-users.html">進入</a>
+        </article>
+        <article class="panel-card">
+          <h3>商品管理</h3>
+          <p>瀏覽所有商品、下架違規商品、復原。</p>
+          <a class="primary-button" href="admin-products.html">進入</a>
+        </article>
+        <article class="panel-card">
+          <h3>檢舉處理</h3>
+          <p>處理文章與留言的檢舉，決定保留或隱藏。</p>
+          <a class="primary-button" href="admin-blog-reports.html">進入</a>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/admin-shell.js"></script>
+  <script>
+  (async function loadStats() {
+    if (!NongAuth.getBackofficeUser()) return;
+    try {
+      const s = await NongAuth.request("/api/admin/stats");
+      document.getElementById("mUsers").textContent     = s.totalUsers ?? "—";
+      document.getElementById("mFarmers").textContent   = s.totalFarmers ?? "—";
+      document.getElementById("mProducts").textContent  = s.totalProducts ?? "—";
+      document.getElementById("mReports").textContent   = s.pendingBlogReports ?? 0;
+      document.getElementById("mConsumers").textContent = s.totalConsumers ?? "—";
+      document.getElementById("mDisabled").textContent  = s.disabledUsers ?? 0;
+      document.getElementById("mOpenGB").textContent    = s.openGroupBuys ?? 0;
+      document.getElementById("mBlogs").textContent     = s.totalBlogs ?? 0;
+    } catch (e) { console.warn("stats:", e); }
+  })();
+  </script>
+</body>
+</html>

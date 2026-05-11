@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的體驗預約｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="">
+  <div id="headerHost"></div>
+  <section class="page-header">
+    <span class="eyebrow">my bookings</span>
+    <h1>我的體驗預約</h1>
+    <p>所有報名過的體驗活動；未開始前可以取消。</p>
+  </section>
+  <main class="detail-body" id="listView"><p style="text-align:center;color:var(--muted);padding:48px 0;">載入中…</p></main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="farm-trips.html">看更多活動</a></div>
+  </footer>
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (async function () {
+    const esc = NongHeader.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const view = document.getElementById("listView");
+    if (!NongAuth.getConsumerUser()) { location.href = "login.html?reason=auth"; return; }
+    await reload();
+
+    async function reload() {
+      try {
+        const page = await NongAuth.request("/api/farm-trips/bookings/mine?size=30");
+        const list = page.content || [];
+        if (!list.length) { view.innerHTML = `<div class="empty-state">還沒預約過活動。<a class="primary-button" href="farm-trips.html" style="margin-left:8px">去看活動</a></div>`; return; }
+        view.innerHTML = `
+          <table class="cart-table">
+            <thead><tr><th>編號</th><th>活動</th><th>日期</th><th>人數</th><th>金額</th><th>狀態</th><th></th></tr></thead>
+            <tbody>${list.map((b) => `
+              <tr data-id="${b.id}">
+                <td><strong>${esc(b.bookingNo || "")}</strong></td>
+                <td>${esc(b.farmTripTitle || "")}<div style="color:var(--muted);font-size:12px">${esc(b.farmerName || "")} ｜ ${esc(b.farmTripLocation || "")}</div></td>
+                <td>${fmt(b.farmTripStart)}</td>
+                <td>${b.numPeople || 0}</td>
+                <td>${currency(b.totalAmount || 0)}</td>
+                <td><span class="status-tag ${tagCls(b.status)}">${esc(b.status || "")}</span></td>
+                <td>
+                  <a class="user-btn ghost" href="farm-trip-detail.html?id=${b.farmTripId}">查看</a>
+                  ${b.status === "CONFIRMED" || b.status === "BOOKED" ? `<button class="user-btn ghost" data-cancel="${b.id}" style="color:var(--clay)">取消</button>` : ""}
+                </td>
+              </tr>
+            `).join("")}</tbody>
+          </table>
+        `;
+        document.querySelectorAll("[data-cancel]").forEach((btn) => btn.addEventListener("click", async () => {
+          if (!confirm("確定要取消這個預約嗎？")) return;
+          try {
+            await NongAuth.request(`/api/farm-trips/bookings/${btn.dataset.cancel}/cancel`, { method: "POST" });
+            toast("已取消");
+            await reload();
+          } catch (e) { toast(e.message || "取消失敗", true); }
+        }));
+      } catch (e) { view.innerHTML = `<div class="empty-state">載入失敗：${esc(e.message)}</div>`; }
+    }
+    function fmt(iso) { if (!iso) return "—"; const d = new Date(iso); if (isNaN(d.getTime())) return iso; const p = (n) => String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+    function tagCls(s) { if (s === "CONFIRMED" || s === "BOOKED") return ""; if (s === "COMPLETED") return "success"; if (s === "CANCELLED") return "muted"; return "warning"; }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

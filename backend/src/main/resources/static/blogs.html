@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>部落格｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="blogs">
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-seal">儂</span><span><strong>你儂我農</strong><small>from soil to table</small></span></a>
+    <button class="mobile-menu" id="mobileMenu" type="button" aria-label="開啟選單">☰</button>
+    <nav class="main-nav" id="mainNav">
+      <div class="nav-item"><a href="index.html"      data-nav-key="home">首頁</a></div>
+      <div class="nav-item"><a href="products.html"   data-nav-key="products">逛商品</a></div>
+      <div class="nav-item"><a href="group-buys.html" data-nav-key="group-buys">團購</a></div>
+      <div class="nav-item"><a href="farm-trips.html" data-nav-key="farm-trips">體驗活動</a></div>
+      <div class="nav-item"><a href="blogs.html"      data-nav-key="blogs">部落格</a></div>
+      <div class="user-zone" id="userZone"></div>
+    </nav>
+  </header>
+
+  <section class="page-header">
+    <span class="eyebrow">read with seasons</span>
+    <h1>邊吃邊讀</h1>
+    <p>把蔬果知識、食譜與產地故事放在購物流程旁邊，增加停留與回訪。</p>
+  </section>
+
+  <div class="toolbar">
+    <div class="category-pills" id="typePills"></div>
+    <form class="search" id="searchForm" role="search">
+      <input type="search" id="keyword" placeholder="搜尋文章…" aria-label="搜尋">
+      <button class="secondary-button" type="submit">搜尋</button>
+    </form>
+  </div>
+
+  <main class="section-block" style="padding-top:0">
+    <div class="journal-grid" id="blogGrid" style="grid-template-columns:repeat(3,minmax(0,1fr))"></div>
+  </main>
+
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links">
+      <a href="index.html">首頁</a><a href="products.html">逛商品</a><a href="group-buys.html">團購</a><a href="farm-trips.html">體驗活動</a>
+    </div>
+  </footer>
+
+  <script src="js/auth.js"></script>
+  <script src="js/header.js"></script>
+  <script src="js/blogs.js"></script>
+</body>
+</html>

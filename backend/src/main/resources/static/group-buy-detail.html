@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>團購詳情｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="group-buys">
+  <div id="headerHost"></div>
+  <main id="gbView">
+    <p style="text-align:center;color:var(--muted);padding:48px 0;">載入中…</p>
+  </main>
+
+  <div class="modal-backdrop" id="joinModal">
+    <div class="modal-card">
+      <h2>加入團購</h2>
+      <p style="color:var(--muted);margin:4px 0 16px">填寫收件資訊。成團後系統會自動為你建立訂單。</p>
+      <form id="joinForm">
+        <label class="field"><span>數量</span><input type="number" id="quantity" min="1" value="1" required></label>
+        <div class="form-grid">
+          <label class="field"><span>收件人姓名</span><input type="text" id="recipientName" maxlength="50" required></label>
+          <label class="field"><span>收件人電話</span><input type="text" id="recipientPhone" maxlength="20" required></label>
+        </div>
+        <div class="form-grid">
+          <label class="field"><span>郵遞區號</span><input type="text" id="shippingZipcode" maxlength="10" required></label>
+          <label class="field"><span>縣市</span><input type="text" id="shippingCity" maxlength="20" required></label>
+        </div>
+        <div class="form-grid">
+          <label class="field"><span>鄉鎮區</span><input type="text" id="shippingDist" maxlength="20" required></label>
+          <label class="field"><span>付款方式</span>
+            <select id="paymentMethod" required>
+              <option value="CREDIT_CARD_SIM">模擬信用卡</option>
+              <option value="BANK_TRANSFER_SIM">模擬 ATM 轉帳</option>
+              <option value="CASH_ON_DELIVERY">貨到付款</option>
+            </select>
+          </label>
+        </div>
+        <label class="field"><span>詳細地址</span><input type="text" id="shippingDetail" maxlength="200" required></label>
+        <label class="field"><span>備註（選填）</span><textarea id="note" maxlength="500"></textarea></label>
+        <div class="modal-foot">
+          <button class="user-btn ghost" type="button" data-close-modal>取消</button>
+          <button class="primary-button" type="submit">確認加入</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="group-buys.html">回團購列表</a><a href="my-group-buys.html">我參加的</a></div>
+  </footer>
+  <div class="toast-flash" id="toast"></div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/header.js"></script>
+  <script src="js/group-buy-detail.js"></script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>訂單管理｜小農工作台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="farmer" data-active-side="orders">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">incoming orders</span>
+          <h2>訂單管理</h2>
+          <p>消費者下的訂單，已付款後可以標記為已出貨。資料來自 GET /api/orders/farmer。</p>
+        </div>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>訂單編號</th><th>消費者</th><th>金額</th><th>狀態</th><th>建立時間</th><th>操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="6" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = FarmerShell.escapeHtml;
+    const STATUS = {
+      PENDING_PAYMENT: { text: "待付款", cls: "warning" },
+      PAID:            { text: "已付款・待出貨", cls: "" },
+      SHIPPED:         { text: "已出貨", cls: "" },
+      COMPLETED:       { text: "已完成", cls: "" },
+      CANCELLED:       { text: "已取消", cls: "warning" }
+    };
+    const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const rows = document.getElementById("rows");
+    await reload();
+    document.addEventListener("click", async (e) => {
+      const ship = e.target.closest("[data-ship]");
+      if (!ship) return;
+      try { await NongAuth.request(`/api/orders/${ship.dataset.ship}/ship`, { method: "POST" }); toast("已標記為已出貨"); await reload(); }
+      catch (err) { toast(err.message || "失敗", true); }
+    });
+
+    async function reload() {
+      try {
+        const page = await NongAuth.request("/api/orders/farmer?size=30");
+        const list = page.content || [];
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted)">還沒收到訂單。</td></tr>`; return; }
+        rows.innerHTML = list.map((o) => {
+          const s = STATUS[o.status] || { text: o.status, cls: "warning" };
+          const canShip = o.status === "PAID";
+          return `
+            <tr>
+              <td><a href="order-detail.html?id=${o.id}" style="color:var(--leaf);font-weight:600">${esc(o.orderNo)}</a></td>
+              <td>${esc(o.consumerName || "")}<div style="color:var(--muted);font-size:12px">${esc(o.recipientPhone || "")}</div></td>
+              <td>${currency(o.totalAmount)}</td>
+              <td><span class="status ${s.cls}">${esc(s.text)}</span></td>
+              <td>${fmt(o.createdAt)}</td>
+              <td>
+                <a class="user-btn ghost" href="order-detail.html?id=${o.id}">查看</a>
+                ${canShip ? `<button class="user-btn ghost" data-ship="${o.id}">出貨</button>` : ""}
+              </td>
+            </tr>
+          `;
+        }).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

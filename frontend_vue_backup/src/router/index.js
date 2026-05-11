@@ -76,6 +76,12 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'my/group-buy-orders',
+        name: 'my-group-buy-orders',
+        component: () => import('@/views/MyHostedGroupBuyOrdersView.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'farmer/group-buy-requests',
         name: 'farmer-group-buy-requests',
         component: () => import('@/views/FarmerGroupBuyRequestsView.vue'),
@@ -85,6 +91,12 @@ const routes = [
         path: 'farmer/group-buys',
         name: 'farmer-group-buys',
         component: () => import('@/views/FarmerGroupBuysView.vue'),
+        meta: { requiresAuth: true, requiresRole: 'FARMER' },
+      },
+      {
+        path: 'farmer/group-buy-orders',
+        name: 'farmer-group-buy-orders',
+        component: () => import('@/views/FarmerGroupBuyOrdersView.vue'),
         meta: { requiresAuth: true, requiresRole: 'FARMER' },
       },
       // ===== 體驗活動 =====

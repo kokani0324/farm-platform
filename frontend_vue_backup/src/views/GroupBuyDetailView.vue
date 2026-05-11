@@ -3,7 +3,8 @@ import { onMounted, ref, computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NSpin, NButton, NTag, NIcon, NProgress, NDivider, NDescriptions, NDescriptionsItem,
-  NModal, NCard, NForm, NFormItem, NInput, NInputNumber, NPopconfirm, useMessage,
+  NModal, NCard, NForm, NFormItem, NInput, NInputNumber, NPopconfirm,
+  NRadioGroup, NRadio, NSpace, useMessage,
 } from 'naive-ui'
 import {
   PeopleOutline, TimeOutline, LeafOutline, FlashOutline, PersonOutline,
@@ -27,7 +28,11 @@ const form = reactive({
   quantity: 1,
   recipientName: auth.user?.name || '',
   recipientPhone: '',
-  shippingAddress: '',
+  shippingZipcode: '',
+  shippingCity: '',
+  shippingDist: '',
+  shippingDetail: '',
+  paymentMethod: 'CREDIT_CARD_SIM',
   note: '',
 })
 
@@ -39,7 +44,14 @@ const rules = {
     validator: (_r, v) => /^[0-9\-+\s()]{8,20}$/.test(v) || new Error('請填有效電話'),
     trigger: 'blur',
   },
-  shippingAddress: { required: true, message: '請填地址', trigger: 'blur' },
+  shippingZipcode: {
+    required: true,
+    validator: (_r, v) => /^\d{3,6}$/.test(v) || new Error('郵遞區號 3~6 位數'),
+    trigger: 'blur',
+  },
+  shippingCity: { required: true, message: '請填縣市', trigger: 'blur' },
+  shippingDist: { required: true, message: '請填鄉鎮區', trigger: 'blur' },
+  shippingDetail: { required: true, message: '請填詳細地址', trigger: 'blur' },
 }
 
 const statusMap = {
@@ -237,17 +249,41 @@ onMounted(load)
         <n-form-item label="收件人電話" path="recipientPhone">
           <n-input v-model:value="form.recipientPhone" placeholder="0912-345-678" />
         </n-form-item>
-        <n-form-item label="收件地址" path="shippingAddress">
-          <n-input v-model:value="form.shippingAddress" />
+        <div class="grid grid-cols-3 gap-2">
+          <n-form-item label="郵遞區號" path="shippingZipcode">
+            <n-input v-model:value="form.shippingZipcode" placeholder="320" maxlength="6" />
+          </n-form-item>
+          <n-form-item label="縣市" path="shippingCity">
+            <n-input v-model:value="form.shippingCity" placeholder="桃園市" maxlength="20" />
+          </n-form-item>
+          <n-form-item label="鄉鎮區" path="shippingDist">
+            <n-input v-model:value="form.shippingDist" placeholder="楊梅區" maxlength="20" />
+          </n-form-item>
+        </div>
+        <n-form-item label="詳細地址" path="shippingDetail">
+          <n-input v-model:value="form.shippingDetail" placeholder="街/路/巷弄/號" maxlength="200" />
+        </n-form-item>
+        <n-form-item label="付款方式" path="paymentMethod">
+          <n-radio-group v-model:value="form.paymentMethod">
+            <n-space vertical>
+              <n-radio value="CREDIT_CARD_SIM">信用卡（模擬，立即扣款）</n-radio>
+              <n-radio value="BANK_TRANSFER_SIM">ATM 轉帳（模擬）</n-radio>
+              <n-radio value="CASH_ON_DELIVERY">貨到付款</n-radio>
+            </n-space>
+          </n-radio-group>
         </n-form-item>
         <n-form-item label="備註(選填)">
           <n-input v-model:value="form.note" type="textarea" :autosize="{ minRows: 2, maxRows: 3 }" maxlength="500" />
         </n-form-item>
+        <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-800 mb-2">
+          加入即視為完成付款（demo 模擬，不會實際扣款）。<br>
+          團購未達標時將自動退款，退出也會自動退款。
+        </div>
       </n-form>
       <template #footer>
         <div class="flex justify-end gap-2">
           <n-button @click="showJoinModal = false">取消</n-button>
-          <n-button type="primary" :loading="acting" @click="submitJoin">確認加入</n-button>
+          <n-button type="primary" :loading="acting" @click="submitJoin">確認加入並付款</n-button>
         </div>
       </template>
     </n-modal>

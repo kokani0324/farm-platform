@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新增 / 編輯文章｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="">
+  <div id="headerHost"></div>
+  <section class="page-header">
+    <span class="eyebrow">write</span>
+    <h1 id="formTitle">新增文章</h1>
+    <p>分享一段你的食農體驗、產地觀察或料理筆記。</p>
+  </section>
+  <main class="detail-body">
+    <form id="blogForm" class="auth-card" style="width:100%;max-width:900px;margin:0 auto;box-shadow:none">
+      <label class="field"><span>分類</span>
+        <select id="blogTypeId" required></select>
+      </label>
+      <label class="field"><span>標題（最多 60 字）</span><input type="text" id="title" maxlength="60" required></label>
+      <label class="field"><span>封面圖網址（選填）</span><input type="url" id="coverImageUrl" maxlength="500" placeholder="https://..."></label>
+      <label class="field"><span>內文</span><textarea id="content" maxlength="50000" required style="min-height:280px"></textarea></label>
+      <div class="action-row" style="justify-content:flex-end">
+        <a class="user-btn ghost" href="my-blogs.html">取消</a>
+        <button class="primary-button" type="submit" id="saveBtn">儲存</button>
+      </div>
+    </form>
+  </main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="my-blogs.html">回我的文章</a></div>
+  </footer>
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (async function () {
+    const esc = NongHeader.escapeHtml;
+    const id = new URLSearchParams(location.search).get("id");
+    const isEdit = !!id;
+
+    if (!NongAuth.getConsumerUser()) { location.href = "login.html?reason=auth"; return; }
+
+    document.getElementById("formTitle").textContent = isEdit ? "編輯文章" : "新增文章";
+
+    // 載入文章分類
+    try {
+      const types = await NongAuth.request("/api/blogs/types");
+      const sel = document.getElementById("blogTypeId");
+      sel.innerHTML = `<option value="">請選擇分類</option>` + types.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join("");
+    } catch (e) { toast("分類載入失敗：" + e.message, true); }
+
+    // 編輯模式：載入既有文章
+    if (isEdit) {
+      try {
+        const b = await NongAuth.request(`/api/blogs/${id}`);
+        document.getElementById("blogTypeId").value = b.blogTypeId || "";
+        document.getElementById("title").value = b.title || "";
+        document.getElementById("coverImageUrl").value = b.coverImageUrl || "";
+        document.getElementById("content").value = b.content || "";
+      } catch (e) { toast("文章載入失敗：" + e.message, true); }
+    }
+
+    document.getElementById("blogForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        blogTypeId: Number(document.getElementById("blogTypeId").value) || null,
+        title: document.getElementById("title").value.trim(),
+        content: document.getElementById("content").value.trim(),
+        coverImageUrl: document.getElementById("coverImageUrl").value.trim() || null
+      };
+      const btn = document.getElementById("saveBtn");
+      btn.disabled = true; btn.textContent = "儲存中…";
+      try {
+        const url = isEdit ? `/api/blogs/${id}` : "/api/blogs";
+        const method = isEdit ? "PUT" : "POST";
+        await NongAuth.request(url, { method, body: JSON.stringify(payload) });
+        toast("已儲存");
+        setTimeout(() => location.href = "my-blogs.html", 600);
+      } catch (err) { toast(err.message || "儲存失敗", true); btn.disabled = false; btn.textContent = "儲存"; }
+    });
+
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

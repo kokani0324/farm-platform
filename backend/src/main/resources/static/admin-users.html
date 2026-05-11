@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>會員管理｜管理員後台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="admin" data-active-side="users">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout admin-tone">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">users</span>
+          <h2>會員管理</h2>
+          <p>所有會員清單。新註冊的小農預設停權，需在這啟用後才能登入後台。</p>
+        </div>
+        <form class="search" id="searchForm" role="search">
+          <input type="search" id="keyword" placeholder="搜尋姓名 / Email…" aria-label="搜尋">
+          <button class="secondary-button" type="submit">搜尋</button>
+        </form>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>姓名</th><th>Email</th><th>角色</th><th>狀態</th><th>建立時間</th><th>操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="6" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/admin-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = AdminShell.escapeHtml;
+    const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}`; };
+    const rows = document.getElementById("rows");
+    let currentKeyword = "";
+
+    await reload();
+    document.getElementById("searchForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      currentKeyword = document.getElementById("keyword").value.trim();
+      await reload();
+    });
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-toggle-enabled]");
+      if (!btn) return;
+      const id = btn.dataset.toggleEnabled;
+      const enable = btn.dataset.enable === "1";
+      try {
+        await NongAuth.request(`/api/admin/users/${id}/${enable ? "enable" : "disable"}`, { method: "POST" });
+        toast(enable ? "已啟用" : "已停權");
+        await reload();
+      } catch (err) { toast(err.message || "操作失敗", true); }
+    });
+
+    async function reload() {
+      try {
+        const url = "/api/admin/users?size=30" + (currentKeyword ? `&keyword=${encodeURIComponent(currentKeyword)}` : "");
+        const page = await NongAuth.request(url);
+        const list = page.content || [];
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted)">沒有符合的會員。</td></tr>`; return; }
+        rows.innerHTML = list.map((u) => {
+          const rolesText = (u.roles || []).join(" / ") || "—";
+          const isAdmin = u.primaryRole === "ADMIN";
+          return `
+            <tr>
+              <td><strong>${esc(u.name || "")}</strong></td>
+              <td>${esc(u.email || "")}</td>
+              <td>${esc(rolesText)}</td>
+              <td><span class="status ${u.enabled ? "" : "warning"}">${u.enabled ? "已啟用" : "停權"}</span></td>
+              <td>${fmt(u.createdAt)}</td>
+              <td>
+                ${isAdmin ? `<span style="color:var(--muted);font-size:12px">管理員無法停權</span>` :
+                  u.enabled
+                    ? `<button class="user-btn ghost" data-toggle-enabled="${u.id}" data-enable="0" style="color:var(--clay)">停權</button>`
+                    : `<button class="user-btn ghost" data-toggle-enabled="${u.id}" data-enable="1">啟用</button>`
+                }
+              </td>
+            </tr>
+          `;
+        }).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

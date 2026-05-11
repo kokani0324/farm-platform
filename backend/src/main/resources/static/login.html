@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登入｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="auth">
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="你儂我農首頁">
+      <span class="brand-seal">儂</span>
+      <span><strong>你儂我農</strong><small>from soil to table</small></span>
+    </a>
+    <nav class="utility-nav">
+      <a href="index.html">回到首頁</a>
+      <a href="register.html">註冊新帳號</a>
+    </nav>
+  </header>
+
+  <main class="auth-wrapper">
+    <section class="auth-card">
+      <span class="eyebrow">member login</span>
+      <h1>歡迎回來</h1>
+      <p class="auth-foot" style="text-align:left;margin:0 0 18px">消費者、小農、管理員共用同一入口；系統會依角色帶到對應頁面。</p>
+
+      <div class="auth-error" id="loginError"></div>
+
+      <form id="loginForm" novalidate>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" name="email" id="loginEmail" placeholder="you@example.com" required autocomplete="email">
+        </label>
+        <label class="field">
+          <span>密碼</span>
+          <input type="password" name="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+        </label>
+        <button class="primary-button" type="submit">登入</button>
+      </form>
+
+      <p class="auth-foot">還沒有帳號？<a href="register.html">立即註冊</a></p>
+    </section>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script>
+    (function initLoginPage() {
+      // 進到登入頁就先清掉後台 session（避免帶著舊 token 重新登入）
+      NongAuth.logoutBackoffice();
+
+      const reason = new URLSearchParams(window.location.search).get("reason");
+      const errorBox = document.getElementById("loginError");
+      if (reason === "auth")  showError("請先登入");
+      if (reason === "role")  showError("帳號角色不符，請重新登入");
+      if (reason === "logout") showError("您已登出");
+
+      function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.classList.add("is-visible");
+      }
+      function hideError() { errorBox.classList.remove("is-visible"); }
+
+      document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        hideError();
+        const email = document.getElementById("loginEmail").value.trim();
+        const password = document.getElementById("loginPassword").value;
+        if (!email || !password) { showError("請輸入 Email 與密碼"); return; }
+        try {
+          const auth = await NongAuth.login(email, password);
+          NongAuth.saveSession(auth);
+          NongAuth.redirectAfterLogin(auth);
+        } catch (err) {
+          showError(err.message || "登入失敗");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

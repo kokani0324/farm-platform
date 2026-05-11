@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>體驗活動｜小農工作台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="farmer" data-active-side="farm-trips">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">my farm trips</span>
+          <h2>我的體驗活動</h2>
+          <p>新增 / 編輯你舉辦的體驗活動。需先設定報名期間，到期才能讓消費者預約。</p>
+        </div>
+        <a class="primary-button" href="farmer-farm-trip-form.html">+ 新增活動</a>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>活動</th><th>類別</th><th>日期</th><th>名額</th><th>單價</th><th>狀態</th><th>操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="7" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = FarmerShell.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}`; };
+    const rows = document.getElementById("rows");
+    await reload();
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-cancel]");
+      if (!btn) return;
+      if (!confirm("確定取消這個活動嗎？已預約者將收到通知（後端尚未實作通知）。")) return;
+      try { await NongAuth.request(`/api/farmer/farm-trips/${btn.dataset.cancel}/cancel`, { method: "POST" }); toast("已取消"); await reload(); }
+      catch (err) { toast(err.message || "失敗", true); }
+    });
+
+    async function reload() {
+      try {
+        const page = await NongAuth.request("/api/farmer/farm-trips?size=30");
+        const list = page.content || [];
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted)">還沒有活動。<a href="farmer-farm-trip-form.html" style="color:var(--leaf);margin-left:8px">+ 新增第一個</a></td></tr>`; return; }
+        rows.innerHTML = list.map((t) => `
+          <tr>
+            <td><strong>${esc(t.title)}</strong><div style="color:var(--muted);font-size:12px">${esc(t.location || "")}</div></td>
+            <td>${esc(t.categoryName || "")}</td>
+            <td>${fmt(t.tripStart)}</td>
+            <td>${t.remaining ?? "—"} / ${t.capacity ?? "—"}</td>
+            <td>${currency(t.price)}</td>
+            <td><span class="status ${t.status === "ACTIVE" ? "" : "warning"}">${esc(t.status)}</span></td>
+            <td>
+              <a class="user-btn ghost" href="farmer-farm-trip-form.html?id=${t.id}">編輯</a>
+              <a class="user-btn ghost" href="farm-trip-detail.html?id=${t.id}">預覽</a>
+              ${t.status !== "CANCELLED" ? `<button class="user-btn ghost" data-cancel="${t.id}" style="color:var(--clay)">取消</button>` : ""}
+            </td>
+          </tr>
+        `).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

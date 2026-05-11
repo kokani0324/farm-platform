@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>團購整單｜小農工作台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="farmer" data-active-side="gb-orders">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">group buy orders</span>
+          <h2>團購整單</h2>
+          <p>已成團、由系統自動結算的整單彙整。可逐筆對團員出貨。</p>
+        </div>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>團購</th><th>商品</th><th>份數</th><th>總金額</th><th>狀態</th><th></th></tr></thead>
+          <tbody id="rows"><tr><td colspan="6" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = FarmerShell.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const rows = document.getElementById("rows");
+    try {
+      const page = await NongAuth.request("/api/farmer/group-buy-orders?size=30");
+      const list = page.content || [];
+      if (!list.length) { rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted)">尚未有成團整單。</td></tr>`; return; }
+      rows.innerHTML = list.map((o) => `
+        <tr>
+          <td>#${esc(o.groupBuyId || "")}</td>
+          <td><strong>${esc(o.productName || "")}</strong></td>
+          <td>${o.totalQuantity || 0}</td>
+          <td>${currency(o.totalAmount || 0)}</td>
+          <td><span class="status">${esc(o.status || "")}</span></td>
+          <td>${o.groupBuyId ? `<a class="user-btn ghost" href="group-buy-detail.html?id=${o.groupBuyId}">查看團</a>` : ""}</td>
+        </tr>
+      `).join("");
+    } catch (e) { rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+  })();
+  </script>
+</body>
+</html>
