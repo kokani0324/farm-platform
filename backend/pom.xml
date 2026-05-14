@@ -80,7 +80,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Lombok（自動產生 getter/setter/constructor） -->
+        <!-- Lombok（自動產生 getter/setter/constructor）減少程式碼用的 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
