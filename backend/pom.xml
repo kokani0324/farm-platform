@@ -5,22 +5,22 @@
                              https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
+    <parent><!-- 繼承spring boot 3.4.5-->
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.4.5</version>
         <relativePath/>
     </parent>
 
-    <groupId>com.farm</groupId>
-    <artifactId>farm-platform-backend</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <groupId>com.farm</groupId> <!--這是組織名稱-->
+    <artifactId>farm-platform-backend</artifactId><!-- 這是專案名稱-->
+    <version>0.0.1-SNAPSHOT</version><!--代表是開發中的第一個版本-->
     <name>farm-platform-backend</name>
     <description>你儂我農 小農平台 後端</description>
 
     <properties>
-        <java.version>17</java.version>
-        <jjwt.version>0.12.6</jjwt.version>
+        <java.version>17</java.version><!--指定JAVA 17-->
+        <jjwt.version>0.12.6</jjwt.version><!--指定JWT套件0.12.6-->
     </properties>
 
     <dependencies>
@@ -80,7 +80,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Lombok（自動產生 getter/setter/constructor）減少程式碼用的 -->
+        <!-- Lombok（自動產生 getter/setter/constructor） -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -108,7 +108,7 @@
         </dependency>
     </dependencies>
 
-    <build>
+    <build> <!--這是告訴 Maven，準備把程式打包成.jar檔，需要做哪些特殊處理-->
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -124,7 +124,7 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
+                <artifactId>maven-compiler-plugin</artifactId><!--指定編譯器-->
                 <configuration>
                     <source>17</source>
                     <target>17</target>

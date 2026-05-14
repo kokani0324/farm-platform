@@ -17,7 +17,10 @@ import java.time.LocalDateTime;
         @Index(name = "idx_blog_type", columnList = "blog_type_id"),
         @Index(name = "idx_blog_status", columnList = "status"),
 })
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter
+@NoArgsConstructor //自動產生一個無參數的空建構子
+@AllArgsConstructor //自動產生一個包含所有屬性參數的建構子
+@Builder
 public class Blog {
 
     @Id

@@ -1,8 +1,9 @@
-spring:
+spring: #這個檔案室負責設定參數的，有資料庫的連線設定，JPA的設定，伺服器設定的位置，預設8080，
+  #還有環境變數，redis的連線資訊，
   application:
     name: farm-platform-backend
 
-  datasource: # 設定連線資料庫 DATA JPA
+  datasource:
     url: jdbc:mysql://localhost:3306/farm_platform?useSSL=false&serverTimezone=Asia/Taipei&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
     username: root
     # 改成你 MySQL 安裝時設定的 root 密碼
@@ -11,8 +12,8 @@ spring:
 
   jpa:
     hibernate:
-      # update：開發階段自動依 Entity 變動修改資料表
-      ddl-auto: update
+      #       update：開發階段自動依 Entity 變動修改資料表
+      ddl-auto: update #啟動時檢查資料庫如果table沒有就自動創立
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
@@ -48,5 +49,5 @@ app:
 
 logging:
   level:
-    com.farm.platform: DEBUG
-    org.springframework.security: INFO
+    com.farm.platform: DEBUG # 這個是發生錯誤時會列出更詳細的錯誤，方便除錯
+    org.springframework.security: INFO #是spring boot 內部的安全架構，INFO表示只顯示重要訊息。
