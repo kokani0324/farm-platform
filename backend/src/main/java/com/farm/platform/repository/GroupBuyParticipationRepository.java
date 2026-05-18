@@ -2,8 +2,8 @@ package com.farm.platform.repository;
 
 import com.farm.platform.entity.GroupBuy;
 import com.farm.platform.entity.GroupBuyParticipation;
+import com.farm.platform.entity.Member;
 import com.farm.platform.entity.ParticipationStatus;
-import com.farm.platform.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -16,10 +16,10 @@ import java.util.Optional;
 
 public interface GroupBuyParticipationRepository extends JpaRepository<GroupBuyParticipation, Long> {
 
-    Optional<GroupBuyParticipation> findByGroupBuyAndUser(GroupBuy groupBuy, User user);
+    Optional<GroupBuyParticipation> findByGroupBuyAndUser(GroupBuy groupBuy, Member user);
 
     @EntityGraph(attributePaths = {"groupBuy", "groupBuy.product", "groupBuy.farmer"})
-    Page<GroupBuyParticipation> findByUserOrderByJoinedAtDesc(User user, Pageable pageable);
+    Page<GroupBuyParticipation> findByUserOrderByJoinedAtDesc(Member user, Pageable pageable);
 
     /** 統計團購已加入的數量(只算 JOINED) */
     @Query("select coalesce(sum(p.quantity), 0) from GroupBuyParticipation p " +

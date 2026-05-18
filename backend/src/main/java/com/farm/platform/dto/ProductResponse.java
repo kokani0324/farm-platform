@@ -50,7 +50,7 @@ public class ProductResponse {
                 .categoryId(p.getCategory().getId())
                 .categoryName(p.getCategory().getName())
                 .farmerId(p.getFarmer().getId())
-                .farmerName(p.getFarmer().getName())
+                .farmerName(p.getFarmer().getFarmName())
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .build();

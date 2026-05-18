@@ -29,12 +29,12 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "consumer_id", nullable = false)
-    private User consumer;
+    private Member consumer;
 
     /** 拆單後每張訂單只屬於一個小農 */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "farmer_id", nullable = false)
-    private User farmer;
+    private Farmer farmer;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;

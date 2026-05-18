@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理場次｜小農工作台</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .batch-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+    .batch-hint { color:var(--muted); font-size:13px; margin:6px 0 0; }
+    details.single-fold { background:#fafaf3; border-radius:10px; padding:14px 18px; }
+    details.single-fold > summary { cursor:pointer; font-weight:600; color:var(--leaf); list-style:none; }
+    details.single-fold > summary::before { content:"▸ "; display:inline-block; transition:transform .15s; }
+    details.single-fold[open] > summary::before { transform:rotate(90deg); }
+    .session-card { background:#fff; border-radius:10px; padding:14px 16px; display:grid; grid-template-columns:1fr auto; gap:6px 14px; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,.05); margin-bottom:10px; }
+    .session-card .date { font-weight:600; font-size:16px; color:#3a463b; }
+    .session-card .sub { color:var(--muted); font-size:13px; }
+    .session-card .status-pill { padding:2px 10px; border-radius:999px; background:#e9f1de; color:var(--leaf); font-size:12px; font-weight:600; }
+    .session-card .status-pill.muted { background:#f0eee5; color:var(--muted); }
+    .session-card .status-pill.danger { background:#fbe8e1; color:var(--clay); }
+  </style>
+</head>
+<body data-page="farmer" data-active-side="farm-trips">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">sessions</span>
+          <h2 id="tripTitle">場次管理</h2>
+          <p id="tripDesc">每筆場次代表可預約的一個時段（一天一場）。</p>
+        </div>
+        <a class="user-btn ghost" href="farmer-farm-trips.html">← 回活動列表</a>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <h3 style="margin-top:0">🚀 批次排程（一次建多場）</h3>
+        <p class="batch-hint">選好開始與結束日期、每天的活動時段，系統會幫你把這段期間每一天都建一場。</p>
+        <form id="batchForm" style="margin-top:14px">
+          <div class="batch-grid">
+            <label class="field"><span>開始日期</span><input type="date" id="startDate" required></label>
+            <label class="field"><span>結束日期（含當天）</span><input type="date" id="endDate" required></label>
+            <label class="field"><span>每天活動開始</span><input type="time" id="dailyStartTime" value="09:00" required></label>
+            <label class="field"><span>每天活動結束</span><input type="time" id="dailyEndTime" value="12:00" required></label>
+            <label class="field"><span>報名截止 = 活動前幾天</span>
+              <select id="bookEndDaysBefore">
+                <option value="0">當天截止</option>
+                <option value="1">前 1 天</option>
+                <option value="2">前 2 天</option>
+                <option value="3" selected>前 3 天（推薦）</option>
+                <option value="5">前 5 天</option>
+                <option value="7">前 7 天</option>
+              </select>
+            </label>
+            <label class="field"><span>單價（可留空，預設展示價）</span><input type="number" id="batchPrice" min="0" step="1" placeholder="—"></label>
+          </div>
+          <p class="batch-hint" id="batchPreview">請選日期區間，下方會預覽要建立的場次數量。</p>
+          <div class="action-row" style="justify-content:flex-end;margin-top:10px">
+            <button class="primary-button" type="submit" id="batchBtn">建立場次</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <details class="single-fold">
+          <summary>單獨新增一場（進階：自訂時間 / 報名期間）</summary>
+          <form id="singleForm" style="margin-top:14px">
+            <div class="batch-grid">
+              <label class="field"><span>本場單價</span><input type="number" id="singlePrice" min="0" step="1" required></label>
+              <label class="field"><span>活動開始</span><input type="datetime-local" id="tripStart" required></label>
+              <label class="field"><span>活動結束</span><input type="datetime-local" id="tripEnd" required></label>
+              <label class="field"><span>報名開放</span><input type="datetime-local" id="bookStart" required></label>
+              <label class="field"><span>報名截止</span><input type="datetime-local" id="bookEnd" required></label>
+            </div>
+            <div class="action-row" style="justify-content:flex-end">
+              <button class="primary-button" type="submit" id="singleBtn">+ 新增單場</button>
+            </div>
+          </form>
+        </details>
+      </article>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <h3 style="margin-top:0">📅 已建立的場次</h3>
+        <div id="sessionList"><p style="color:var(--muted)">載入中…</p></div>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = FarmerShell.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const fmtDate = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}`; };
+    const fmtTime = (iso) => { if (!iso) return ""; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${p(d.getHours())}:${p(d.getMinutes())}`; };
+    const fmtFull = (iso) => `${fmtDate(iso)} ${fmtTime(iso)}`;
+    const SSTATUS = { ACTIVE: "報名中", CANCELLED: "已取消", COMPLETED: "已截止" };
+
+    const id = new URLSearchParams(location.search).get("id");
+    if (!id) { document.getElementById("sessionList").innerHTML = `<p style="color:var(--clay)">缺少活動 id</p>`; return; }
+
+    let trip = null;
+    try {
+      trip = await NongAuth.request(`/api/farm-trips/${id}`);
+      document.getElementById("tripTitle").textContent = `場次管理 ｜ ${trip.title}`;
+      document.getElementById("tripDesc").textContent =
+        trip.pricingMode === "PER_WEIGHT"
+          ? "此活動按採收重量計價，場次無人數上限；建議一天一場。"
+          : `此活動每人定價，每場容量上限 ${trip.capacityPerSession ?? "—"} 人。`;
+      document.getElementById("batchPrice").placeholder = `預設 ${currency(trip.price)}`;
+      document.getElementById("singlePrice").value = trip.price;
+    } catch (e) { toast("活動載入失敗：" + e.message, true); return; }
+
+    // 批次預覽
+    function updatePreview() {
+      const s = document.getElementById("startDate").value;
+      const e = document.getElementById("endDate").value;
+      const t1 = document.getElementById("dailyStartTime").value;
+      const t2 = document.getElementById("dailyEndTime").value;
+      const p = document.getElementById("batchPreview");
+      if (!s || !e) { p.textContent = "請選日期區間，下方會預覽要建立的場次數量。"; return; }
+      const d1 = new Date(s), d2 = new Date(e);
+      if (d2 < d1) { p.textContent = "⚠️ 結束日期早於開始日期"; return; }
+      const days = Math.round((d2 - d1) / 86400000) + 1;
+      p.innerHTML = `將建立 <strong style="color:var(--leaf)">${days}</strong> 場 ${t1}–${t2}，從 ${fmtDate(s)} 到 ${fmtDate(e)}。重複日期會自動跳過。`;
+    }
+    ["startDate","endDate","dailyStartTime","dailyEndTime"].forEach(k =>
+      document.getElementById(k).addEventListener("change", updatePreview));
+
+    // 預設批次起訖：明天 ~ 一週後
+    const tomorrow = new Date(Date.now() + 86400000);
+    const weekLater = new Date(Date.now() + 7 * 86400000);
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    document.getElementById("startDate").value = iso(tomorrow);
+    document.getElementById("endDate").value = iso(weekLater);
+    updatePreview();
+
+    // 批次送出
+    document.getElementById("batchForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const priceVal = document.getElementById("batchPrice").value;
+      const payload = {
+        startDate: document.getElementById("startDate").value,
+        endDate: document.getElementById("endDate").value,
+        dailyStartTime: document.getElementById("dailyStartTime").value,
+        dailyEndTime: document.getElementById("dailyEndTime").value,
+        bookEndDaysBefore: Number(document.getElementById("bookEndDaysBefore").value),
+        sessionPrice: priceVal ? Number(priceVal) : null,
+        skipExisting: true
+      };
+      const btn = document.getElementById("batchBtn");
+      btn.disabled = true; btn.textContent = "建立中…";
+      try {
+        const r = await NongAuth.request(`/api/farmer/farm-trips/${id}/sessions/batch`, { method: "POST", body: JSON.stringify(payload) });
+        const created = r.created || [], skipped = r.skipped || [];
+        const msg = `已新增 ${created.length} 場` + (skipped.length ? `；${skipped.length} 個日期已存在或來不及收報名，已跳過` : "");
+        toast(msg);
+        await reloadSessions();
+      } catch (err) { toast(err.message || "建立失敗", true); }
+      finally { btn.disabled = false; btn.textContent = "建立場次"; }
+    });
+
+    // 單場送出
+    document.getElementById("singleForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        sessionPrice: Number(document.getElementById("singlePrice").value),
+        tripStart: document.getElementById("tripStart").value,
+        tripEnd:   document.getElementById("tripEnd").value,
+        bookStart: document.getElementById("bookStart").value,
+        bookEnd:   document.getElementById("bookEnd").value,
+      };
+      const btn = document.getElementById("singleBtn");
+      btn.disabled = true; btn.textContent = "新增中…";
+      try {
+        await NongAuth.request(`/api/farmer/farm-trips/${id}/sessions`, { method: "POST", body: JSON.stringify(payload) });
+        toast("已新增場次");
+        ["tripStart","tripEnd","bookStart","bookEnd"].forEach(k => document.getElementById(k).value = "");
+        await reloadSessions();
+      } catch (err) { toast(err.message || "新增失敗", true); }
+      finally { btn.disabled = false; btn.textContent = "+ 新增單場"; }
+    });
+
+    // 列表
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-cancel-session]");
+      if (!btn) return;
+      if (!confirm("取消此場次將同步取消所有 CONFIRMED 訂單，確定？")) return;
+      try { await NongAuth.request(`/api/farmer/farm-trip-sessions/${btn.dataset.cancelSession}/cancel`, { method: "POST" }); toast("已取消場次"); await reloadSessions(); }
+      catch (err) { toast(err.message || "失敗", true); }
+    });
+
+    async function reloadSessions() {
+      const wrap = document.getElementById("sessionList");
+      try {
+        const t = await NongAuth.request(`/api/farm-trips/${id}`);
+        const list = t.sessions || [];
+        if (!list.length) { wrap.innerHTML = `<p style="color:var(--muted)">尚未建立任何場次</p>`; return; }
+        // 按月份分組
+        const byMonth = new Map();
+        list.forEach(s => {
+          const key = fmtDate(s.tripStart).slice(0, 7);  // yyyy/MM
+          if (!byMonth.has(key)) byMonth.set(key, []);
+          byMonth.get(key).push(s);
+        });
+        let html = "";
+        for (const [month, items] of byMonth) {
+          html += `<h4 style="margin:18px 0 10px;color:var(--muted);font-size:14px">${esc(month)}（${items.length} 場）</h4>`;
+          html += items.map(s => {
+            const cls = s.status === "ACTIVE" ? "" : (s.status === "CANCELLED" ? "danger" : "muted");
+            const cap = trip.pricingMode === "PER_WEIGHT" ? "無上限" : `${s.attendance} / ${trip.capacityPerSession ?? "—"} 人`;
+            return `
+              <div class="session-card">
+                <div>
+                  <div class="date">${fmtDate(s.tripStart)} <small style="color:var(--muted);font-weight:400;font-size:14px">${fmtTime(s.tripStart)}–${fmtTime(s.tripEnd)}</small></div>
+                  <div class="sub">場次價 ${currency(s.sessionPrice)} ｜ 報名截止 ${fmtFull(s.bookEnd)} ｜ 已預約 ${cap}</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <span class="status-pill ${cls}">${esc(SSTATUS[s.status] || s.status)}</span>
+                  ${s.status === "ACTIVE" ? `<button class="user-btn ghost" data-cancel-session="${s.id}" style="color:var(--clay)">取消</button>` : ""}
+                </div>
+              </div>
+            `;
+          }).join("");
+        }
+        wrap.innerHTML = html;
+      } catch (e) { wrap.innerHTML = `<p style="color:var(--clay)">載入失敗：${esc(e.message)}</p>`; }
+    }
+
+    await reloadSessions();
+
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 2200);
+    }
+  })();
+  </script>
+</body>
+</html>

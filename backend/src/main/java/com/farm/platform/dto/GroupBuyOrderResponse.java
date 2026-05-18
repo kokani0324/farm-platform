@@ -58,7 +58,7 @@ public class GroupBuyOrderResponse {
                 .hostId(o.getHost().getId())
                 .hostName(o.getHost().getName())
                 .farmerId(o.getFarmer().getId())
-                .farmerName(o.getFarmer().getName())
+                .farmerName(o.getFarmer().getFarmName())
                 .groupPrice(gb.getGroupPrice())
                 .totalQuantity(o.getTotalQuantity())
                 .totalAmount(o.getTotalAmount())

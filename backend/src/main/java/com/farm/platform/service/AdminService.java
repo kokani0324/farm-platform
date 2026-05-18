@@ -1,5 +1,6 @@
 package com.farm.platform.service;
 
+import com.farm.platform.dto.AdminFarmerReviewResponse;
 import com.farm.platform.dto.AdminStatsResponse;
 import com.farm.platform.dto.AdminUserResponse;
 import com.farm.platform.dto.PageResponse;
@@ -13,13 +14,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Slf4j
 public class AdminService {
 
-    private final UserRepository userRepo;
+    private final MemberRepository memberRepo;
+    private final FarmerRepository farmerRepo;
+    private final AdminRepository adminRepo;
     private final ProductRepository productRepo;
     private final OrderRepository orderRepo;
     private final GroupBuyRepository groupBuyRepo;
@@ -29,12 +34,17 @@ public class AdminService {
     /* ============================ Stats ============================ */
 
     public AdminStatsResponse stats() {
+        long members = memberRepo.count();
+        long farmers = farmerRepo.count();
+        long admins = adminRepo.count();
+        long disabled = memberRepo.countByStatus(AccountStatus.SUSPENDED)
+                + farmerRepo.countByStatus(AccountStatus.SUSPENDED);
         return AdminStatsResponse.builder()
-                .totalUsers(userRepo.count())
-                .totalConsumers(userRepo.countByRole(Role.CONSUMER))
-                .totalFarmers(userRepo.countByRole(Role.FARMER))
-                .totalAdmins(userRepo.countByRole(Role.ADMIN))
-                .disabledUsers(userRepo.countByEnabledFalse())
+                .totalUsers(members + farmers + admins)
+                .totalConsumers(members)
+                .totalFarmers(farmers)
+                .totalAdmins(admins)
+                .disabledUsers(disabled)
                 .totalProducts(productRepo.count())
                 .activeProducts(productRepo.countByStatus(ProductStatus.ACTIVE))
                 .totalOrders(orderRepo.count())
@@ -46,22 +56,56 @@ public class AdminService {
                 .build();
     }
 
-    /* ============================ Users ============================ */
+    /* ============================ Members ============================ */
 
-    public PageResponse<AdminUserResponse> listUsers(String keyword, Pageable pageable) {
-        Page<User> page = userRepo.searchAdminList(keyword, pageable);
-        return PageResponse.of(page, AdminUserResponse::from);
+    public PageResponse<AdminUserResponse> listMembers(String keyword, Pageable pageable) {
+        Page<Member> page = memberRepo.searchAdminList(keyword, pageable);
+        return PageResponse.of(page, AdminUserResponse::fromMember);
     }
 
     @Transactional
-    public AdminUserResponse setEnabled(Long id, boolean enabled) {
-        User u = userRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("使用者不存在"));
-        if (u.getRole() == Role.ADMIN) {
-            throw new IllegalStateException("無法停用管理員帳號");
-        }
-        u.setEnabled(enabled);
-        return AdminUserResponse.from(u);
+    public AdminUserResponse setMemberEnabled(Long id, boolean enabled) {
+        Member m = memberRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("會員不存在"));
+        m.setStatus(enabled ? AccountStatus.NORMAL : AccountStatus.SUSPENDED);
+        return AdminUserResponse.fromMember(m);
+    }
+
+    /* ============================ Farmers ============================ */
+
+    public PageResponse<AdminUserResponse> listFarmers(String keyword, Pageable pageable) {
+        Page<Farmer> page = farmerRepo.searchAdminList(keyword, pageable);
+        return PageResponse.of(page, AdminUserResponse::fromFarmer);
+    }
+
+    @Transactional
+    public AdminUserResponse setFarmerEnabled(Long id, boolean enabled) {
+        Farmer f = farmerRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("小農不存在"));
+        f.setStatus(enabled ? AccountStatus.NORMAL : AccountStatus.SUSPENDED);
+        return AdminUserResponse.fromFarmer(f);
+    }
+
+    /** 待審小農列表（cert_passed=false） */
+    public List<AdminFarmerReviewResponse> listPendingFarmers() {
+        return farmerRepo.findByCertPassedFalseOrderByCreatedAtDesc().stream()
+                .map(AdminFarmerReviewResponse::from)
+                .toList();
+    }
+
+    public AdminFarmerReviewResponse getFarmerDetail(Long id) {
+        Farmer f = farmerRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("小農不存在"));
+        return AdminFarmerReviewResponse.from(f);
+    }
+
+    /** 通過/駁回小農送審 */
+    @Transactional
+    public AdminFarmerReviewResponse setFarmerCertPassed(Long id, boolean passed) {
+        Farmer f = farmerRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("小農不存在"));
+        f.setCertPassed(passed);
+        return AdminFarmerReviewResponse.from(f);
     }
 
     /* ============================ Products ============================ */

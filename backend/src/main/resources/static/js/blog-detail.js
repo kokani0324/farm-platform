@@ -47,6 +47,8 @@ function render(b, comments) {
       ${cover}
       <div style="white-space:pre-wrap;line-height:2;color:#3a463b;font-size:16px">${esc(b.content || "")}</div>
 
+      ${renderFeaturedProducts(b.featuredProducts || [])}
+
       <div class="action-row" style="margin-top:24px">
         <button class="secondary-button" id="likeBtn">♡ 按讚 (${b.likeCount || 0})</button>
         <button class="user-btn ghost" id="reportBtn" style="color:var(--clay)">檢舉</button>
@@ -74,7 +76,49 @@ function render(b, comments) {
   bindEvents();
 }
 
+function renderFeaturedProducts(list) {
+  if (!list.length) return "";
+  const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+  return `
+    <section style="margin-top:28px;background:#f7f4ec;border-radius:14px;padding:22px">
+      <div class="section-heading compact" style="margin-bottom:14px">
+        <span class="eyebrow">featured</span>
+        <h2 style="margin:0">文中介紹的商品</h2>
+      </div>
+      <div class="featured-product-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
+        ${list.map(p => {
+          const img = p.imageUrl && p.imageUrl.trim() ? p.imageUrl : "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=600";
+          return `
+            <article style="background:#fff;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px">
+              <a href="product-detail.html?id=${p.id}" style="display:block;height:130px;background:#eee center/cover no-repeat url('${esc(img)}');border-radius:8px"></a>
+              <a href="product-detail.html?id=${p.id}" style="color:#3a463b;font-weight:600;text-decoration:none">${esc(p.name)}</a>
+              <div style="color:var(--muted);font-size:13px">${currency(p.price)} / ${esc(p.unit || "件")}</div>
+              <div style="display:flex;gap:6px;margin-top:auto">
+                <a class="user-btn ghost" href="product-detail.html?id=${p.id}" style="flex:1;text-align:center">看商品</a>
+                <button class="primary-button" data-add-cart="${p.id}" ${p.available ? "" : "disabled"} style="flex:1;font-size:13px;padding:8px 10px">${p.available ? "加入購物車" : "缺貨"}</button>
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function bindEvents() {
+  document.querySelectorAll("[data-add-cart]").forEach(btn => btn.addEventListener("click", async () => {
+    const user = NongAuth.getConsumerUser();
+    if (!user) { toast("請先登入"); setTimeout(() => location.href = "login.html", 700); return; }
+    if (user.type !== "MEMBER") { toast("非會員身份無法購買", true); return; }
+    btn.disabled = true; const original = btn.textContent; btn.textContent = "加入中…";
+    try {
+      await NongAuth.request("/api/cart/items", { method: "POST", body: JSON.stringify({ productId: Number(btn.dataset.addCart), quantity: 1 }) });
+      toast("已加入購物車");
+      if (window.NongHeader && NongHeader.refreshCartBadge) await NongHeader.refreshCartBadge();
+    } catch (e) { toast(e.message || "加入失敗", true); }
+    finally { btn.disabled = false; btn.textContent = original; }
+  }));
+
   document.getElementById("likeBtn").addEventListener("click", async () => {
     try {
       const updated = await NongAuth.request(`/api/blogs/${blogId}/like`, { method: "POST" });

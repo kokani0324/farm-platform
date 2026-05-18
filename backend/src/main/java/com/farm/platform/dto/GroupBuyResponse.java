@@ -60,7 +60,7 @@ public class GroupBuyResponse {
                 .productUnit(gb.getProduct().getUnit())
                 .productPrice(gb.getProduct().getPrice())
                 .farmerId(gb.getFarmer().getId())
-                .farmerName(gb.getFarmer().getName())
+                .farmerName(gb.getFarmer().getFarmName())
                 .hostId(gb.getHost().getId())
                 .hostName(gb.getHost().getName())
                 .targetQuantity(target)

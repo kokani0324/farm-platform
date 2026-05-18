@@ -4,9 +4,10 @@ import com.farm.platform.dto.CheckoutRequest;
 import com.farm.platform.dto.OrderResponse;
 import com.farm.platform.dto.PageResponse;
 import com.farm.platform.entity.*;
+import com.farm.platform.repository.FarmerRepository;
+import com.farm.platform.repository.MemberRepository;
 import com.farm.platform.repository.OrderRepository;
 import com.farm.platform.repository.ProductRepository;
-import com.farm.platform.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +29,8 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
-    private final UserRepository userRepository;
+    private final MemberRepository memberRepository;
+    private final FarmerRepository farmerRepository;
     private final CartService cartService;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -37,20 +39,18 @@ public class OrderService {
 
     @Transactional
     public List<OrderResponse> checkout(String email, CheckoutRequest req) {
-        User consumer = getUser(email);
+        Member consumer = getMember(email);
 
         Map<Long, Integer> raw = cartService.getRawCart(consumer.getId());
         if (raw.isEmpty()) {
             throw new IllegalArgumentException("購物車是空的");
         }
 
-        // 一次撈所有商品
         List<Product> products = productRepository.findAllById(raw.keySet());
         if (products.size() != raw.size()) {
             throw new IllegalArgumentException("購物車中有商品已下架，請重新整理購物車");
         }
 
-        // 驗證可購 + 庫存
         for (Product p : products) {
             int qty = raw.get(p.getId());
             if (p.getStatus() != ProductStatus.ACTIVE) {
@@ -61,16 +61,14 @@ public class OrderService {
             }
         }
 
-        // 依小農分組
-        Map<User, List<Product>> byFarmer = new LinkedHashMap<>();
+        Map<Farmer, List<Product>> byFarmer = new LinkedHashMap<>();
         for (Product p : products) {
             byFarmer.computeIfAbsent(p.getFarmer(), k -> new ArrayList<>()).add(p);
         }
 
-        // 為每個小農建立一張訂單
         List<Order> created = new ArrayList<>();
-        for (Map.Entry<User, List<Product>> entry : byFarmer.entrySet()) {
-            User farmer = entry.getKey();
+        for (Map.Entry<Farmer, List<Product>> entry : byFarmer.entrySet()) {
+            Farmer farmer = entry.getKey();
             List<Product> myProducts = entry.getValue();
 
             Order order = Order.builder()
@@ -102,7 +100,6 @@ public class OrderService {
                         .build();
                 order.addItem(item);
 
-                // 扣庫存
                 p.setStock(p.getStock() - qty);
                 if (p.getStock() == 0) {
                     p.setStatus(ProductStatus.SOLD_OUT);
@@ -114,7 +111,6 @@ public class OrderService {
             created.add(orderRepository.save(order));
         }
 
-        // 清空購物車
         cartService.clearByUserId(consumer.getId());
 
         return created.stream().map(OrderResponse::from).toList();
@@ -123,16 +119,13 @@ public class OrderService {
     /* ============ 查詢 ============ */
 
     public PageResponse<OrderResponse> myOrders(String email, Pageable pageable) {
-        User me = getUser(email);
+        Member me = getMember(email);
         Page<Order> page = orderRepository.findByConsumerOrderByCreatedAtDesc(me, pageable);
         return PageResponse.of(page, OrderResponse::from);
     }
 
     public PageResponse<OrderResponse> farmerOrders(String email, Pageable pageable) {
-        User me = getUser(email);
-        if (!me.hasRole(Role.FARMER)) {
-            throw new AccessDeniedException("非小農");
-        }
+        Farmer me = getFarmer(email);
         Page<Order> page = orderRepository.findByFarmerOrderByCreatedAtDesc(me, pageable);
         return PageResponse.of(page, OrderResponse::from);
     }
@@ -175,7 +168,6 @@ public class OrderService {
             throw new IllegalStateException("已付款訂單不可取消，請聯絡小農");
         }
 
-        // 還原庫存
         for (OrderItem item : o.getItems()) {
             Product p = item.getProduct();
             if (p == null) continue;
@@ -222,12 +214,17 @@ public class OrderService {
 
     /* ============ helpers ============ */
 
-    private User getUser(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("使用者不存在"));
+    private Member getMember(String email) {
+        return memberRepository.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("會員帳號不存在"));
     }
 
-    /** NONG-yyyyMMdd-XXXX，重複則重試（理論上極少發生） */
+    private Farmer getFarmer(String email) {
+        return farmerRepository.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("小農帳號不存在"));
+    }
+
+    /** NONG-yyyyMMdd-XXXX */
     private String generateOrderNo() {
         String date = LocalDate.now().format(DATE_FMT);
         for (int i = 0; i < 5; i++) {
@@ -236,7 +233,6 @@ public class OrderService {
                 return no;
             }
         }
-        // 撞五次 → 改用毫秒尾碼
         return "NONG-" + date + "-" + System.currentTimeMillis() % 100000;
     }
 }

@@ -11,7 +11,7 @@
   <section class="page-header">
     <span class="eyebrow">write</span>
     <h1 id="formTitle">新增文章</h1>
-    <p>分享一段你的食農體驗、產地觀察或料理筆記。</p>
+    <p>分享一段你的食農體驗、料理筆記或營養知識。「產地日記」僅限小農發表。</p>
   </section>
   <main class="detail-body">
     <form id="blogForm" class="auth-card" style="width:100%;max-width:900px;margin:0 auto;box-shadow:none">
@@ -21,6 +21,20 @@
       <label class="field"><span>標題（最多 60 字）</span><input type="text" id="title" maxlength="60" required></label>
       <label class="field"><span>封面圖網址（選填）</span><input type="url" id="coverImageUrl" maxlength="500" placeholder="https://..."></label>
       <label class="field"><span>內文</span><textarea id="content" maxlength="50000" required style="min-height:280px"></textarea></label>
+
+      <div class="field">
+        <span>文中介紹的商品（選填，最多 6 項；讀者可從文章內加入購物車）</span>
+        <div style="background:#f7f4ec;border-radius:8px;padding:12px;font-size:14px">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+            <input type="search" id="productSearch" placeholder="🔍 搜尋商品名稱或農場…" style="flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
+            <span id="selectedCount" style="color:var(--muted);font-size:13px">已選 0 / 6</span>
+          </div>
+          <div id="productPicker" style="max-height:280px;overflow:auto">
+            <p style="color:var(--muted);margin:4px 0">載入商品中…</p>
+          </div>
+        </div>
+      </div>
+
       <div class="action-row" style="justify-content:flex-end">
         <a class="user-btn ghost" href="my-blogs.html">取消</a>
         <button class="primary-button" type="submit" id="saveBtn">儲存</button>
@@ -39,18 +53,94 @@
     const id = new URLSearchParams(location.search).get("id");
     const isEdit = !!id;
 
-    if (!NongAuth.getConsumerUser()) { location.href = "login.html?reason=auth"; return; }
+    const user = NongAuth.getConsumerUser();
+    if (!user) { location.href = "login.html?reason=auth"; return; }
 
     document.getElementById("formTitle").textContent = isEdit ? "編輯文章" : "新增文章";
 
-    // 載入文章分類
+    // 分類 dropdown：會員看不到 farmerOnly 類別
     try {
       const types = await NongAuth.request("/api/blogs/types");
+      const visible = types.filter(t => !t.farmerOnly);
       const sel = document.getElementById("blogTypeId");
-      sel.innerHTML = `<option value="">請選擇分類</option>` + types.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join("");
+      sel.innerHTML = `<option value="">請選擇分類</option>` + visible.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join("");
     } catch (e) { toast("分類載入失敗：" + e.message, true); }
 
-    // 編輯模式：載入既有文章
+    // 商品列表 (會員可介紹全平台 ACTIVE 商品)，按農場分組 + 搜尋
+    const selectedIds = new Set();
+    let products = [];
+    let searchKeyword = "";
+
+    try {
+      const page = await NongAuth.request("/api/public/products?size=200");
+      products = page.content || [];
+      renderProductPicker();
+    } catch (e) { document.getElementById("productPicker").innerHTML = `<p style="color:var(--muted)">商品載入失敗</p>`; }
+
+    document.getElementById("productSearch").addEventListener("input", (e) => {
+      searchKeyword = e.target.value.trim().toLowerCase();
+      renderProductPicker();
+    });
+
+    // 使用 event delegation，只綁一次
+    document.getElementById("productPicker").addEventListener("change", (e) => {
+      if (!e.target.matches("[data-pid]")) return;
+      const pid = Number(e.target.dataset.pid);
+      if (e.target.checked) {
+        if (selectedIds.size >= 6) { e.target.checked = false; toast("最多選 6 項", true); return; }
+        selectedIds.add(pid);
+      } else selectedIds.delete(pid);
+      updateSelectedCount();
+    });
+
+    function updateSelectedCount() {
+      document.getElementById("selectedCount").textContent = `已選 ${selectedIds.size} / 6`;
+    }
+
+    function renderProductPicker() {
+      const wrap = document.getElementById("productPicker");
+      if (!products.length) {
+        wrap.innerHTML = `<p style="color:var(--muted);margin:4px 0">目前沒有可介紹的商品。</p>`;
+        return;
+      }
+      // 套搜尋
+      const filtered = !searchKeyword ? products : products.filter(p =>
+        (p.name || "").toLowerCase().includes(searchKeyword)
+        || (p.farmerName || "").toLowerCase().includes(searchKeyword)
+        || (p.categoryName || "").toLowerCase().includes(searchKeyword)
+      );
+      if (!filtered.length) {
+        wrap.innerHTML = `<p style="color:var(--muted);margin:4px 0">沒有符合「${esc(searchKeyword)}」的商品。</p>`;
+        return;
+      }
+      // 按 farmerName 分組
+      const groups = new Map();
+      for (const p of filtered) {
+        const key = p.farmerName || "(未指定農場)";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(p);
+      }
+      let html = "";
+      for (const [farmName, items] of groups) {
+        html += `
+          <div style="margin-bottom:14px">
+            <div style="font-weight:600;color:var(--leaf);font-size:13px;padding:6px 8px;background:#fff;border-radius:6px;margin-bottom:6px">
+              🌾 ${esc(farmName)} <span style="color:var(--muted);font-weight:400">（${items.length} 項）</span>
+            </div>
+            ${items.map(p => `
+              <label style="display:flex;align-items:center;gap:10px;padding:6px 10px;cursor:pointer;border-radius:6px" onmouseover="this.style.background='#fff'" onmouseout="this.style.background=''">
+                <input type="checkbox" data-pid="${p.id}" ${selectedIds.has(p.id) ? "checked" : ""}>
+                <span style="flex:1">${esc(p.name)}</span>
+                <small style="color:var(--muted)">${esc(p.categoryName || "")} ｜ NT$ ${Number(p.price).toLocaleString("zh-TW")} / ${esc(p.unit || "件")}</small>
+              </label>
+            `).join("")}
+          </div>
+        `;
+      }
+      wrap.innerHTML = html;
+      updateSelectedCount();
+    }
+
     if (isEdit) {
       try {
         const b = await NongAuth.request(`/api/blogs/${id}`);
@@ -58,6 +148,8 @@
         document.getElementById("title").value = b.title || "";
         document.getElementById("coverImageUrl").value = b.coverImageUrl || "";
         document.getElementById("content").value = b.content || "";
+        (b.featuredProducts || []).forEach(p => selectedIds.add(p.id));
+        renderProductPicker();
       } catch (e) { toast("文章載入失敗：" + e.message, true); }
     }
 
@@ -67,7 +159,8 @@
         blogTypeId: Number(document.getElementById("blogTypeId").value) || null,
         title: document.getElementById("title").value.trim(),
         content: document.getElementById("content").value.trim(),
-        coverImageUrl: document.getElementById("coverImageUrl").value.trim() || null
+        coverImageUrl: document.getElementById("coverImageUrl").value.trim() || null,
+        productIds: Array.from(selectedIds)
       };
       const btn = document.getElementById("saveBtn");
       btn.disabled = true; btn.textContent = "儲存中…";

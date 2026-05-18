@@ -1,8 +1,8 @@
 package com.farm.platform.repository;
 
+import com.farm.platform.entity.Farmer;
 import com.farm.platform.entity.GroupBuy;
 import com.farm.platform.entity.GroupBuyStatus;
-import com.farm.platform.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -20,7 +20,7 @@ public interface GroupBuyRepository extends JpaRepository<GroupBuy, Long> {
     Page<GroupBuy> findByStatusOrderByDeadlineDateAsc(GroupBuyStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"product", "host", "participations"})
-    Page<GroupBuy> findByFarmerOrderByCreatedAtDesc(User farmer, Pageable pageable);
+    Page<GroupBuy> findByFarmerOrderByCreatedAtDesc(Farmer farmer, Pageable pageable);
 
     @EntityGraph(attributePaths = {"product", "farmer", "host", "participations"})
     @Query("select gb from GroupBuy gb where gb.id = :id")

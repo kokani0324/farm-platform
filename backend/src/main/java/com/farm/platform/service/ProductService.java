@@ -4,8 +4,8 @@ import com.farm.platform.dto.PageResponse;
 import com.farm.platform.dto.ProductRequest;
 import com.farm.platform.dto.ProductResponse;
 import com.farm.platform.entity.*;
+import com.farm.platform.repository.FarmerRepository;
 import com.farm.platform.repository.ProductRepository;
-import com.farm.platform.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +21,7 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final UserRepository userRepository;
+    private final FarmerRepository farmerRepository;
     private final CategoryService categoryService;
 
     /* ========== 公開：瀏覽 ========== */
@@ -40,14 +40,14 @@ public class ProductService {
     /* ========== 小農：管理 ========== */
 
     public List<ProductResponse> listMine(String farmerEmail) {
-        User farmer = getFarmer(farmerEmail);
+        Farmer farmer = getFarmer(farmerEmail);
         return productRepository.findByFarmerOrderByCreatedAtDesc(farmer)
                 .stream().map(ProductResponse::from).toList();
     }
 
     @Transactional
     public ProductResponse create(String farmerEmail, ProductRequest req) {
-        User farmer = getFarmer(farmerEmail);
+        Farmer farmer = getFarmer(farmerEmail);
         Category category = categoryService.getById(req.getCategoryId());
 
         Product p = Product.builder()
@@ -84,7 +84,6 @@ public class ProductService {
         p.setGroupBuyEnabled(Boolean.TRUE.equals(req.getGroupBuyEnabled()));
         p.setCategory(category);
 
-        // 庫存=0 自動售完；售完狀態若庫存恢復則 ACTIVE
         if (p.getStock() == 0) {
             p.setStatus(ProductStatus.SOLD_OUT);
         } else if (p.getStatus() == ProductStatus.SOLD_OUT) {
@@ -113,13 +112,9 @@ public class ProductService {
 
     /* ========== helpers ========== */
 
-    private User getFarmer(String email) {
-        User u = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("使用者不存在"));
-        if (!u.hasRole(Role.FARMER)) {
-            throw new AccessDeniedException("只有小農可以管理商品");
-        }
-        return u;
+    private Farmer getFarmer(String email) {
+        return farmerRepository.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("小農帳號不存在或未通過審核"));
     }
 
     private Product loadAndCheckOwnership(String farmerEmail, Long productId) {

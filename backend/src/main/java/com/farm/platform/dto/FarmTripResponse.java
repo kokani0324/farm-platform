@@ -2,6 +2,7 @@ package com.farm.platform.dto;
 
 import com.farm.platform.entity.FarmTrip;
 import com.farm.platform.entity.FarmTripStatus;
+import com.farm.platform.entity.PricingMode;
 import com.farm.platform.entity.TripType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -19,48 +21,49 @@ public class FarmTripResponse {
     private String intro;
     private String imageUrl;
     private TripType tripType;
+    private PricingMode pricingMode;
     private String location;
     private BigDecimal price;
-    private Integer capacity;
-    private Integer currentBookings;
-    private Integer remaining;
-
-    private LocalDateTime tripStart;
-    private LocalDateTime tripEnd;
-    private LocalDateTime bookStart;
-    private LocalDateTime bookEnd;
-
+    private Integer capacityPerSession;
     private FarmTripStatus status;
-
-    private Long categoryId;
-    private String categoryName;
 
     private Long farmerId;
     private String farmerName;
 
+    private Integer ratingCount;
+    private Integer ratingTotalStars;
+    private Double averageRating;
+
+    /** 詳情頁帶場次清單 (列表頁可為 null) */
+    private List<FarmTripSessionResponse> sessions;
+
     private LocalDateTime createdAt;
 
     public static FarmTripResponse from(FarmTrip t) {
+        return from(t, null);
+    }
+
+    public static FarmTripResponse from(FarmTrip t, List<FarmTripSessionResponse> sessions) {
+        double avg = t.getRatingCount() > 0
+                ? Math.round((double) t.getRatingTotalStars() / t.getRatingCount() * 10.0) / 10.0
+                : 0.0;
         return FarmTripResponse.builder()
                 .id(t.getId())
                 .title(t.getTitle())
                 .intro(t.getIntro())
                 .imageUrl(t.getImageUrl())
                 .tripType(t.getTripType())
+                .pricingMode(t.getPricingMode())
                 .location(t.getLocation())
                 .price(t.getPrice())
-                .capacity(t.getCapacity())
-                .currentBookings(t.getCurrentBookings())
-                .remaining(t.remainingCapacity())
-                .tripStart(t.getTripStart())
-                .tripEnd(t.getTripEnd())
-                .bookStart(t.getBookStart())
-                .bookEnd(t.getBookEnd())
+                .capacityPerSession(t.getCapacityPerSession())
                 .status(t.getStatus())
-                .categoryId(t.getCategory().getId())
-                .categoryName(t.getCategory().getName())
                 .farmerId(t.getFarmer().getId())
-                .farmerName(t.getFarmer().getName())
+                .farmerName(t.getFarmer().getFarmName())
+                .ratingCount(t.getRatingCount())
+                .ratingTotalStars(t.getRatingTotalStars())
+                .averageRating(avg)
+                .sessions(sessions)
                 .createdAt(t.getCreatedAt())
                 .build();
     }

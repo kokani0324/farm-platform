@@ -7,6 +7,7 @@ import com.farm.platform.dto.PageResponse;
 import com.farm.platform.dto.ParticipationResponse;
 import com.farm.platform.dto.ReviewGroupBuyRequest;
 import com.farm.platform.entity.GroupBuyRequestStatus;
+import com.farm.platform.security.AccountPrincipal;
 import com.farm.platform.service.GroupBuyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -55,9 +56,9 @@ public class FarmerGroupBuyController {
 
     /** 取得某團購的整單明細（含參與者清單） */
     @GetMapping("/group-buys/{id}/order")
-    public GroupBuyOrderResponse getGroupBuyOrder(@AuthenticationPrincipal UserDetails me,
+    public GroupBuyOrderResponse getGroupBuyOrder(@AuthenticationPrincipal AccountPrincipal me,
                                                   @PathVariable Long id) {
-        return service.getGroupBuyOrder(me.getUsername(), id);
+        return service.getGroupBuyOrder(me, id);
     }
 
     /** 標記某團員 participation 已出貨 */

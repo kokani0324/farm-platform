@@ -52,7 +52,7 @@ public class GroupBuyRequestResponse {
                 .initiatorId(r.getInitiator().getId())
                 .initiatorName(r.getInitiator().getName())
                 .farmerId(r.getFarmer().getId())
-                .farmerName(r.getFarmer().getName())
+                .farmerName(r.getFarmer().getFarmName())
                 .targetQuantity(r.getTargetQuantity())
                 .groupPrice(r.getGroupPrice())
                 .openDate(r.getOpenDate())

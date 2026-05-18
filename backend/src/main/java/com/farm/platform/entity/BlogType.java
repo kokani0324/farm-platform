@@ -28,6 +28,11 @@ public class BlogType {
     @Builder.Default
     private Integer sortOrder = 0;
 
+    /** 是否僅限小農可發表（例如「產地日記」） */
+    @Column(name = "farmer_only", nullable = false, columnDefinition = "BIT(1) DEFAULT 0")
+    @Builder.Default
+    private Boolean farmerOnly = false;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

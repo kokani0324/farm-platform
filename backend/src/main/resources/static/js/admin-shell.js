@@ -8,7 +8,10 @@ const AdminShell = (function () {
   const SIDEBAR = [
     { key: "dashboard", label: "管理總覽",   href: "admin.html" },
     { key: "users",     label: "會員管理",   href: "admin-users.html" },
+    { key: "farmer-reviews", label: "小農審核", href: "admin-farmer-reviews.html" },
     { key: "products",  label: "商品管理",   href: "admin-products.html" },
+    { key: "trip-audits", label: "體驗活動審核", href: "admin-farm-trip-audits.html" },
+    { key: "news",      label: "最新消息",   href: "admin-news.html" },
     { key: "blog-reports", label: "檢舉處理", href: "admin-blog-reports.html" }
   ];
 

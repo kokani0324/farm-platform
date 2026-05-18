@@ -25,7 +25,7 @@
 
       <article class="panel-card is-large" style="grid-column:1/-1">
         <table class="data-table">
-          <thead><tr><th>姓名</th><th>Email</th><th>角色</th><th>狀態</th><th>建立時間</th><th>操作</th></tr></thead>
+          <thead><tr><th>姓名</th><th>Email</th><th>身份</th><th>狀態</th><th>建立時間</th><th>操作</th></tr></thead>
           <tbody id="rows"><tr><td colspan="6" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
         </table>
       </article>
@@ -54,33 +54,33 @@
       const id = btn.dataset.toggleEnabled;
       const enable = btn.dataset.enable === "1";
       try {
-        await NongAuth.request(`/api/admin/users/${id}/${enable ? "enable" : "disable"}`, { method: "POST" });
+        await NongAuth.request(`/api/admin/members/${id}/${enable ? "enable" : "disable"}`, { method: "POST" });
         toast(enable ? "已啟用" : "已停權");
         await reload();
       } catch (err) { toast(err.message || "操作失敗", true); }
     });
 
+    const TYPE_LABEL = { MEMBER: "會員", FARMER: "小農", ADMIN: "管理員" };
+
     async function reload() {
       try {
-        const url = "/api/admin/users?size=30" + (currentKeyword ? `&keyword=${encodeURIComponent(currentKeyword)}` : "");
+        const url = "/api/admin/members?size=30" + (currentKeyword ? `&keyword=${encodeURIComponent(currentKeyword)}` : "");
         const page = await NongAuth.request(url);
         const list = page.content || [];
         if (!list.length) { rows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted)">沒有符合的會員。</td></tr>`; return; }
         rows.innerHTML = list.map((u) => {
-          const rolesText = (u.roles || []).join(" / ") || "—";
-          const isAdmin = u.primaryRole === "ADMIN";
+          const enabled = u.status === "NORMAL";
           return `
             <tr>
               <td><strong>${esc(u.name || "")}</strong></td>
               <td>${esc(u.email || "")}</td>
-              <td>${esc(rolesText)}</td>
-              <td><span class="status ${u.enabled ? "" : "warning"}">${u.enabled ? "已啟用" : "停權"}</span></td>
+              <td>${esc(TYPE_LABEL[u.type] || u.type || "—")}</td>
+              <td><span class="status ${enabled ? "" : "warning"}">${enabled ? "已啟用" : esc(u.status || "停權")}</span></td>
               <td>${fmt(u.createdAt)}</td>
               <td>
-                ${isAdmin ? `<span style="color:var(--muted);font-size:12px">管理員無法停權</span>` :
-                  u.enabled
-                    ? `<button class="user-btn ghost" data-toggle-enabled="${u.id}" data-enable="0" style="color:var(--clay)">停權</button>`
-                    : `<button class="user-btn ghost" data-toggle-enabled="${u.id}" data-enable="1">啟用</button>`
+                ${enabled
+                  ? `<button class="user-btn ghost" data-toggle-enabled="${u.id}" data-enable="0" style="color:var(--clay)">停權</button>`
+                  : `<button class="user-btn ghost" data-toggle-enabled="${u.id}" data-enable="1">啟用</button>`
                 }
               </td>
             </tr>

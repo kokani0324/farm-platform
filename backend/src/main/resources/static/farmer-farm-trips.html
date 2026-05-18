@@ -15,14 +15,14 @@
         <div>
           <span class="eyebrow">my farm trips</span>
           <h2>我的體驗活動</h2>
-          <p>新增 / 編輯你舉辦的體驗活動。需先設定報名期間，到期才能讓消費者預約。</p>
+          <p>建立活動後送平台審核，通過後可在「管理場次」新增報名場次。</p>
         </div>
         <a class="primary-button" href="farmer-farm-trip-form.html">+ 新增活動</a>
       </div>
 
       <article class="panel-card is-large" style="grid-column:1/-1">
         <table class="data-table">
-          <thead><tr><th>活動</th><th>類別</th><th>日期</th><th>名額</th><th>單價</th><th>狀態</th><th>操作</th></tr></thead>
+          <thead><tr><th>活動</th><th>類別</th><th>計價</th><th>單價</th><th>容量/場</th><th>狀態</th><th>操作</th></tr></thead>
           <tbody id="rows"><tr><td colspan="7" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
         </table>
       </article>
@@ -36,14 +36,16 @@
   (async function () {
     const esc = FarmerShell.escapeHtml;
     const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
-    const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}`; };
+    const TYPE = { FARM_EXPERIENCE: "農場體驗", FIELD_VISIT: "產地參訪" };
+    const PRICING = { PER_PERSON: "每人", PER_WEIGHT: "每公斤" };
+    const STATUS = { PENDING: "審核中", REJECTED: "未通過", ACTIVE: "上架中", CLOSED: "已下架" };
     const rows = document.getElementById("rows");
     await reload();
     document.addEventListener("click", async (e) => {
-      const btn = e.target.closest("[data-cancel]");
+      const btn = e.target.closest("[data-close]");
       if (!btn) return;
-      if (!confirm("確定取消這個活動嗎？已預約者將收到通知（後端尚未實作通知）。")) return;
-      try { await NongAuth.request(`/api/farmer/farm-trips/${btn.dataset.cancel}/cancel`, { method: "POST" }); toast("已取消"); await reload(); }
+      if (!confirm("確定要下架這個活動嗎？相關 ACTIVE 場次將自動取消。")) return;
+      try { await NongAuth.request(`/api/farmer/farm-trips/${btn.dataset.close}/close`, { method: "POST" }); toast("已下架"); await reload(); }
       catch (err) { toast(err.message || "失敗", true); }
     });
 
@@ -55,15 +57,16 @@
         rows.innerHTML = list.map((t) => `
           <tr>
             <td><strong>${esc(t.title)}</strong><div style="color:var(--muted);font-size:12px">${esc(t.location || "")}</div></td>
-            <td>${esc(t.categoryName || "")}</td>
-            <td>${fmt(t.tripStart)}</td>
-            <td>${t.remaining ?? "—"} / ${t.capacity ?? "—"}</td>
+            <td>${esc(TYPE[t.tripType] || t.tripType)}</td>
+            <td>${esc(PRICING[t.pricingMode] || "")}</td>
             <td>${currency(t.price)}</td>
-            <td><span class="status ${t.status === "ACTIVE" ? "" : "warning"}">${esc(t.status)}</span></td>
+            <td>${t.pricingMode === "PER_WEIGHT" ? "無上限" : (t.capacityPerSession ?? "—")}</td>
+            <td><span class="status ${t.status === "ACTIVE" ? "" : (t.status === "REJECTED" ? "warning" : "muted")}">${esc(STATUS[t.status] || t.status)}</span></td>
             <td>
               <a class="user-btn ghost" href="farmer-farm-trip-form.html?id=${t.id}">編輯</a>
+              ${t.status === "ACTIVE" ? `<a class="user-btn ghost" href="farmer-farm-trip-sessions.html?id=${t.id}">管理場次</a>` : ""}
               <a class="user-btn ghost" href="farm-trip-detail.html?id=${t.id}">預覽</a>
-              ${t.status !== "CANCELLED" ? `<button class="user-btn ghost" data-cancel="${t.id}" style="color:var(--clay)">取消</button>` : ""}
+              ${t.status === "ACTIVE" ? `<button class="user-btn ghost" data-close="${t.id}" style="color:var(--clay)">下架</button>` : ""}
             </td>
           </tr>
         `).join("");

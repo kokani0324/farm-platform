@@ -3,6 +3,7 @@ package com.farm.platform.service;
 import com.farm.platform.dto.*;
 import com.farm.platform.entity.*;
 import com.farm.platform.repository.*;
+import com.farm.platform.security.AccountPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -31,7 +32,8 @@ public class GroupBuyService {
     private final GroupBuyParticipationRepository participationRepo;
     private final GroupBuyOrderRepository groupBuyOrderRepo;
     private final ProductRepository productRepo;
-    private final UserRepository userRepo;
+    private final MemberRepository memberRepo;
+    private final FarmerRepository farmerRepo;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -39,7 +41,7 @@ public class GroupBuyService {
 
     @Transactional
     public GroupBuyRequestResponse createRequest(String email, CreateGroupBuyRequest req) {
-        User initiator = getUser(email);
+        Member initiator = getMember(email);
 
         Product product = productRepo.findById(req.getProductId())
                 .orElseThrow(() -> new IllegalArgumentException("商品不存在"));
@@ -124,14 +126,13 @@ public class GroupBuyService {
     /* ============================ 列表查詢 ============================ */
 
     public PageResponse<GroupBuyRequestResponse> myRequests(String email, Pageable pageable) {
-        User me = getUser(email);
+        Member me = getMember(email);
         Page<GroupBuyRequest> page = requestRepo.findByInitiatorOrderByRequestedAtDesc(me, pageable);
         return PageResponse.of(page, r -> GroupBuyRequestResponse.from(r, null));
     }
 
     public PageResponse<GroupBuyRequestResponse> farmerRequests(String email, GroupBuyRequestStatus status, Pageable pageable) {
-        User me = getUser(email);
-        if (!me.hasRole(Role.FARMER)) throw new AccessDeniedException("非小農");
+        Farmer me = getFarmer(email);
         Page<GroupBuyRequest> page = (status != null)
                 ? requestRepo.findByFarmerAndStatusOrderByRequestedAtDesc(me, status, pageable)
                 : requestRepo.findByFarmerOrderByRequestedAtDesc(me, pageable);
@@ -140,21 +141,20 @@ public class GroupBuyService {
 
     public PageResponse<GroupBuyResponse> listOpen(Pageable pageable, String viewerEmail) {
         Page<GroupBuy> page = groupBuyRepo.findByStatusOrderByDeadlineDateAsc(GroupBuyStatus.OPEN, pageable);
-        User viewer = (viewerEmail != null) ? userRepo.findByEmail(viewerEmail).orElse(null) : null;
+        Member viewer = (viewerEmail != null) ? memberRepo.findByEmail(viewerEmail).orElse(null) : null;
         return PageResponse.of(page, gb -> toResponse(gb, viewer));
     }
 
     public PageResponse<GroupBuyResponse> farmerGroupBuys(String email, Pageable pageable) {
-        User me = getUser(email);
-        if (!me.hasRole(Role.FARMER)) throw new AccessDeniedException("非小農");
+        Farmer me = getFarmer(email);
         Page<GroupBuy> page = groupBuyRepo.findByFarmerOrderByCreatedAtDesc(me, pageable);
-        return PageResponse.of(page, gb -> toResponse(gb, me));
+        return PageResponse.of(page, gb -> toResponse(gb, null));
     }
 
     public GroupBuyResponse getDetail(Long id, String viewerEmail) {
         GroupBuy gb = groupBuyRepo.findFullById(id)
                 .orElseThrow(() -> new IllegalArgumentException("團購不存在"));
-        User viewer = (viewerEmail != null) ? userRepo.findByEmail(viewerEmail).orElse(null) : null;
+        Member viewer = (viewerEmail != null) ? memberRepo.findByEmail(viewerEmail).orElse(null) : null;
         return toResponse(gb, viewer);
     }
 
@@ -162,7 +162,7 @@ public class GroupBuyService {
 
     @Transactional
     public ParticipationResponse join(String email, Long groupBuyId, JoinGroupBuyRequest req) {
-        User me = getUser(email);
+        Member me = getMember(email);
         GroupBuy gb = groupBuyRepo.findFullById(groupBuyId)
                 .orElseThrow(() -> new IllegalArgumentException("團購不存在"));
 
@@ -186,7 +186,6 @@ public class GroupBuyService {
             if (p.getStatus() == ParticipationStatus.JOINED) {
                 throw new IllegalStateException("您已加入此團購,如需修改請先退出再重新加入");
             }
-            // 重新加入(從 WITHDRAWN 變回 JOINED)
             p.setStatus(ParticipationStatus.JOINED);
             p.setQuantity(req.getQuantity());
             p.setSubtotal(subtotal);
@@ -197,7 +196,6 @@ public class GroupBuyService {
             p.setShippingDist(req.getShippingDist());
             p.setShippingDetail(req.getShippingDetail());
             p.setNote(req.getNote());
-            // 重新加入也視為一次新的付款（mock）
             p.setPaymentStatus(PaymentStatus.PAID);
             p.setPaymentMethod(req.getPaymentMethod());
             p.setPaidAt(nowTs);
@@ -230,7 +228,7 @@ public class GroupBuyService {
 
     @Transactional
     public ParticipationResponse withdraw(String email, Long groupBuyId) {
-        User me = getUser(email);
+        Member me = getMember(email);
         GroupBuy gb = groupBuyRepo.findById(groupBuyId)
                 .orElseThrow(() -> new IllegalArgumentException("團購不存在"));
         if (gb.getStatus() != GroupBuyStatus.OPEN) {
@@ -245,7 +243,6 @@ public class GroupBuyService {
             throw new IllegalStateException("已退出");
         }
         p.setStatus(ParticipationStatus.WITHDRAWN);
-        // 退出視為退款（mock）
         if (p.getPaymentStatus() == PaymentStatus.PAID) {
             p.setPaymentStatus(PaymentStatus.REFUNDED);
             p.setRefundedAt(LocalDateTime.now());
@@ -255,40 +252,42 @@ public class GroupBuyService {
     }
 
     public PageResponse<ParticipationResponse> myParticipations(String email, Pageable pageable) {
-        User me = getUser(email);
+        Member me = getMember(email);
         Page<GroupBuyParticipation> page = participationRepo.findByUserOrderByJoinedAtDesc(me, pageable);
         return PageResponse.of(page, ParticipationResponse::from);
     }
 
-    /* ============================ 團購整單（GroupBuyOrder） ============================ */
+    /* ============================ 團購整單 ============================ */
 
-    /** 團主的整單列表 */
     public PageResponse<GroupBuyOrderResponse> myHostedOrders(String hostEmail, Pageable pageable) {
-        User me = getUser(hostEmail);
+        Member me = getMember(hostEmail);
         Page<GroupBuyOrder> page = groupBuyOrderRepo.findByHostOrderByCreatedAtDesc(me, pageable);
         return PageResponse.of(page, gbo -> GroupBuyOrderResponse.from(gbo, List.of()));
     }
 
-    /** 小農名下的整單列表 */
     public PageResponse<GroupBuyOrderResponse> farmerGroupBuyOrders(String farmerEmail, Pageable pageable) {
-        User me = getUser(farmerEmail);
-        if (!me.hasRole(Role.FARMER)) throw new AccessDeniedException("非小農");
+        Farmer me = getFarmer(farmerEmail);
         Page<GroupBuyOrder> page = groupBuyOrderRepo.findByFarmerOrderByCreatedAtDesc(me, pageable);
         return PageResponse.of(page, gbo -> GroupBuyOrderResponse.from(gbo, List.of()));
     }
 
-    /** 取得某團購的整單（團主、小農、參與成員可看） */
-    public GroupBuyOrderResponse getGroupBuyOrder(String viewerEmail, Long groupBuyId) {
-        User me = getUser(viewerEmail);
+    public GroupBuyOrderResponse getGroupBuyOrder(AccountPrincipal viewer, Long groupBuyId) {
         GroupBuy gb = groupBuyRepo.findById(groupBuyId)
                 .orElseThrow(() -> new IllegalArgumentException("團購不存在"));
         GroupBuyOrder gbo = groupBuyOrderRepo.findByGroupBuy(gb)
                 .orElseThrow(() -> new IllegalStateException("尚未成團或團購結算未完成"));
 
-        boolean isHost = gbo.getHost().getId().equals(me.getId());
-        boolean isFarmer = gbo.getFarmer().getId().equals(me.getId());
-        boolean isMember = participationRepo.findByGroupBuyAndUser(gb, me).isPresent();
-        if (!isHost && !isFarmer && !isMember && !me.hasRole(Role.ADMIN)) {
+        boolean isAdmin = viewer.getType() == AccountType.ADMIN;
+        boolean isFarmer = viewer.getType() == AccountType.FARMER
+                && gbo.getFarmer().getId().equals(viewer.getId());
+        boolean isHost = viewer.getType() == AccountType.MEMBER
+                && gbo.getHost().getId().equals(viewer.getId());
+        boolean isMember = false;
+        if (viewer.getType() == AccountType.MEMBER) {
+            Member m = memberRepo.findById(viewer.getId()).orElse(null);
+            isMember = m != null && participationRepo.findByGroupBuyAndUser(gb, m).isPresent();
+        }
+        if (!isAdmin && !isFarmer && !isHost && !isMember) {
             throw new AccessDeniedException("無權檢視此團購整單");
         }
 
@@ -297,10 +296,9 @@ public class GroupBuyService {
         return GroupBuyOrderResponse.from(gbo, partsDto);
     }
 
-    /** 小農標記某位團員的 participation 已出貨 */
     @Transactional
     public ParticipationResponse markParticipationShipped(String farmerEmail, Long groupBuyId, Long participationId) {
-        User me = getUser(farmerEmail);
+        Farmer me = getFarmer(farmerEmail);
         GroupBuy gb = groupBuyRepo.findById(groupBuyId)
                 .orElseThrow(() -> new IllegalArgumentException("團購不存在"));
         if (!gb.getFarmer().getId().equals(me.getId())) {
@@ -335,10 +333,9 @@ public class GroupBuyService {
         return ParticipationResponse.from(p);
     }
 
-    /** 團員標記自己的 participation 已收貨 */
     @Transactional
     public ParticipationResponse markMyReceiptReceived(String email, Long groupBuyId) {
-        User me = getUser(email);
+        Member me = getMember(email);
         GroupBuy gb = groupBuyRepo.findById(groupBuyId)
                 .orElseThrow(() -> new IllegalArgumentException("團購不存在"));
         GroupBuyParticipation p = participationRepo.findByGroupBuyAndUser(gb, me)
@@ -352,7 +349,6 @@ public class GroupBuyService {
         p.setReceiptStatus(ReceiptStatus.RECEIVED);
         p.setReceiptDatetime(LocalDateTime.now());
 
-        // 若所有 JOINED 參與者都已 RECEIVED → 整單 COMPLETED
         GroupBuyOrder gbo = p.getGroupBuyOrder();
         if (gbo != null) {
             List<GroupBuyParticipation> all = participationRepo.findByGroupBuyAndStatus(gb, ParticipationStatus.JOINED);
@@ -366,9 +362,8 @@ public class GroupBuyService {
         return ParticipationResponse.from(p);
     }
 
-    /* ============================ 排程: 截止判定 ============================ */
+    /* ============================ 排程 ============================ */
 
-    /** 每分鐘檢查到期的團購 */
     @Scheduled(fixedDelayString = "PT60S", initialDelayString = "PT10S")
     @Transactional
     public void closeExpiredGroupBuys() {
@@ -389,7 +384,6 @@ public class GroupBuyService {
         }
     }
 
-    /** 未達標：標記 FAILED + 退款所有已付款的團員 */
     private void settleFailed(GroupBuy gb, int joinedQty) {
         gb.setStatus(GroupBuyStatus.FAILED);
         List<GroupBuyParticipation> joined = participationRepo.findByGroupBuyAndStatus(gb, ParticipationStatus.JOINED);
@@ -405,7 +399,6 @@ public class GroupBuyService {
         log.info("[GroupBuy] #{} 未達標({}/{}) → FAILED, 退款 {} 筆", gb.getId(), joinedQty, gb.getTargetQuantity(), refunded);
     }
 
-    /** 成團處理：扣庫存 + 為整團建立一張 GroupBuyOrder（屬團主），所有團員 participation 連到此整單 */
     private void settleSuccess(GroupBuy gb) {
         List<GroupBuyParticipation> joined = participationRepo.findByGroupBuyAndStatus(gb, ParticipationStatus.JOINED);
         int totalQty = joined.stream().mapToInt(GroupBuyParticipation::getQuantity).sum();
@@ -423,7 +416,6 @@ public class GroupBuyService {
         product.setStock(product.getStock() - totalQty);
         if (product.getStock() == 0) product.setStatus(ProductStatus.SOLD_OUT);
 
-        // 加入時已逐筆付款，整單成立即視為 PAID（待出貨）
         GroupBuyOrder gbo = GroupBuyOrder.builder()
                 .orderNo(generateGroupBuyOrderNo())
                 .groupBuy(gb)
@@ -449,7 +441,7 @@ public class GroupBuyService {
 
     /* ============================ helpers ============================ */
 
-    private GroupBuyResponse toResponse(GroupBuy gb, User viewer) {
+    private GroupBuyResponse toResponse(GroupBuy gb, Member viewer) {
         int currentQty = participationRepo.sumQuantityByGroupBuy(gb, ParticipationStatus.JOINED);
         Boolean joined = null;
         Integer myQty = null;
@@ -461,9 +453,14 @@ public class GroupBuyService {
         return GroupBuyResponse.from(gb, currentQty, joined, myQty);
     }
 
-    private User getUser(String email) {
-        return userRepo.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("使用者不存在"));
+    private Member getMember(String email) {
+        return memberRepo.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("會員帳號不存在"));
+    }
+
+    private Farmer getFarmer(String email) {
+        return farmerRepo.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("小農帳號不存在"));
     }
 
     private String generateGroupBuyOrderNo() {

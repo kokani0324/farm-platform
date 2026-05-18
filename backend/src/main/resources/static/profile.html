@@ -11,7 +11,7 @@
   <section class="page-header">
     <span class="eyebrow">profile</span>
     <h1>會員中心</h1>
-    <p>查看你的帳號資訊與快速進入個人功能。</p>
+    <p>查看與編輯你的帳號資訊，或修改登入密碼。(Phase A 僅開放會員;小農 / 管理員 Phase B 補)</p>
   </section>
   <main class="detail-body">
     <div class="detail-layout" id="profileBody">
@@ -19,49 +19,131 @@
         <h3>帳號資訊</h3>
         <div id="info"><p style="color:var(--muted)">載入中…</p></div>
       </section>
-      <section class="panel-card">
-        <h3>快速連結</h3>
-        <div class="task-list" id="quickLinks"></div>
+
+      <section class="panel-card" id="memberOnly1" style="display:none">
+        <h3>編輯資料</h3>
+        <p style="color:var(--muted);font-size:13px;margin-top:-8px">Email 為帳號識別不可修改;可變更姓名、暱稱、電話與地址。</p>
+        <div class="auth-error" id="profileError"></div>
+        <div class="auth-error" id="profileOk" style="background:#e6f4ea;color:#1e7a3a;border-color:#bfe3cb"></div>
+        <form id="profileForm" novalidate>
+          <label class="field"><span>Email(不可修改)</span><input type="email" id="profileEmail" disabled></label>
+          <label class="field"><span>姓名</span><input type="text" id="profileName" maxlength="50" required></label>
+          <label class="field"><span>暱稱(選填)</span><input type="text" id="profileNickname" maxlength="50"></label>
+          <label class="field"><span>電話(選填)</span><input type="tel" id="profilePhone" maxlength="20"></label>
+          <label class="field"><span>地址(選填)</span><input type="text" id="profileAddress" maxlength="100"></label>
+          <button class="primary-button" type="submit" id="profileSubmit">儲存變更</button>
+        </form>
+      </section>
+
+      <section class="panel-card" id="memberOnly2" style="display:none">
+        <h3>修改密碼</h3>
+        <p style="color:var(--muted);font-size:13px;margin-top:-8px">新密碼長度 6~64 字元,與舊密碼不可相同。</p>
+        <div class="auth-error" id="pwError"></div>
+        <div class="auth-error" id="pwOk" style="background:#e6f4ea;color:#1e7a3a;border-color:#bfe3cb"></div>
+        <form id="pwForm" novalidate>
+          <label class="field"><span>舊密碼</span><input type="password" id="oldPassword" required autocomplete="current-password"></label>
+          <label class="field"><span>新密碼</span><input type="password" id="newPassword" required minlength="6" maxlength="64" autocomplete="new-password"></label>
+          <label class="field"><span>再次輸入新密碼</span><input type="password" id="newPasswordConfirm" required minlength="6" maxlength="64" autocomplete="new-password"></label>
+          <button class="primary-button" type="submit" id="pwSubmit">變更密碼</button>
+        </form>
       </section>
     </div>
   </main>
   <footer class="site-footer">
-    <div><strong>你儂我農</strong><p>CKA101 第三組專題</p></div>
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
     <div class="footer-links"><a href="index.html">回首頁</a></div>
   </footer>
   <script src="js/auth.js"></script><script src="js/header.js"></script>
   <script>
   (function () {
     const esc = NongHeader.escapeHtml;
-    const user = NongAuth.getConsumerUser();
+    const user = NongAuth.getActiveUser();
     if (!user) { location.href = "login.html?reason=auth"; return; }
-    const role = user.activeRole || user.role;
-    const roleLabel = role === "FARMER" ? "小農" : role === "ADMIN" ? "管理員" : "消費者";
+    const typeLabel = user.type === "FARMER" ? "小農" : user.type === "ADMIN" ? "管理員" : "會員";
 
-    document.getElementById("info").innerHTML = `
-      <table class="cart-table" style="margin:0">
-        <tbody>
-          <tr><th>姓名</th><td>${esc(user.name || "")}</td></tr>
-          <tr><th>Email</th><td>${esc(user.email || "")}</td></tr>
-          <tr><th>當前身份</th><td><span class="status-tag success">${esc(roleLabel)}</span></td></tr>
-          <tr><th>擁有身份</th><td>${(user.roles || []).map((r) => `<span class="status-tag" style="margin-right:6px">${esc(r)}</span>`).join("")}</td></tr>
-        </tbody>
-      </table>
-      <p style="color:var(--muted);font-size:13px;margin-top:14px">會員資料編輯功能（改名、改密碼等）尚未實作，將於下一輪補上。</p>
-    `;
-
-    const links = [];
-    if (role === "CONSUMER") {
-      links.push(["我的訂單", "orders.html"]);
-      links.push(["我發起的團購", "my-group-buy-requests.html"]);
-      links.push(["我參加的團購", "my-group-buys.html"]);
-      links.push(["我的團購整單", "my-group-buy-orders.html"]);
-      links.push(["我的體驗預約", "my-farm-trip-bookings.html"]);
-      links.push(["我的文章", "my-blogs.html"]);
+    function renderInfo(u) {
+      document.getElementById("info").innerHTML = `
+        <table class="cart-table" style="margin:0">
+          <tbody>
+            <tr><th>姓名</th><td>${esc(u.name || "")}</td></tr>
+            <tr><th>Email</th><td>${esc(u.email || "")}</td></tr>
+            <tr><th>身份</th><td><span class="status-tag success">${esc(typeLabel)}</span></td></tr>
+            <tr><th>帳號 ID</th><td>${esc(String(u.accountId || ""))}</td></tr>
+          </tbody>
+        </table>
+      `;
     }
-    if (role === "FARMER") { links.push(["小農工作台", "farmer.html"]); links.push(["我的文章", "my-blogs.html"]); }
-    if (role === "ADMIN")  { links.push(["管理員後台", "admin.html"]); }
-    document.getElementById("quickLinks").innerHTML = links.map((l) => `<a class="side-link" href="${l[1]}" style="display:block">${esc(l[0])} →</a>`).join("");
+    renderInfo(user);
+
+    // Phase A 編輯功能僅 MEMBER 可用
+    if (user.type !== "MEMBER") {
+      document.getElementById("info").insertAdjacentHTML("beforeend",
+        `<p style="color:var(--muted);font-size:13px;margin-top:14px">小農 / 管理員的資料編輯功能將於 Phase B 開放。</p>`);
+      return;
+    }
+
+    document.getElementById("memberOnly1").style.display = "";
+    document.getElementById("memberOnly2").style.display = "";
+    document.getElementById("profileEmail").value    = user.email || "";
+    document.getElementById("profileName").value     = user.name  || "";
+    // 註:nong_user 沒存 nickname/phone/address(AuthResponse 沒帶),要 reload 時才有完整資料。Phase B 加 /api/account/me。
+
+    function showMsg(elId, text, ok) {
+      const el = document.getElementById(elId);
+      el.textContent = text;
+      el.classList.add("is-visible");
+      if (!ok) setTimeout(() => el.classList.remove("is-visible"), 4000);
+    }
+    function hide(...ids) { ids.forEach((id) => document.getElementById(id).classList.remove("is-visible")); }
+
+    document.getElementById("profileForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hide("profileError", "profileOk");
+      const payload = {
+        name:     document.getElementById("profileName").value.trim(),
+        nickname: document.getElementById("profileNickname").value.trim() || null,
+        phone:    document.getElementById("profilePhone").value.trim() || null,
+        address:  document.getElementById("profileAddress").value.trim() || null
+      };
+      if (!payload.name) { showMsg("profileError", "姓名不可為空"); return; }
+      const btn = document.getElementById("profileSubmit");
+      btn.disabled = true; const original = btn.textContent; btn.textContent = "儲存中…";
+      try {
+        const resp = await NongAuth.request("/api/account/profile", {
+          method: "PUT", body: JSON.stringify(payload)
+        });
+        NongAuth.saveSession(resp);
+        renderInfo(resp);
+        if (NongHeader.renderUserZone) NongHeader.renderUserZone();
+        showMsg("profileOk", "資料已更新", true);
+      } catch (err) {
+        showMsg("profileError", err.message || "更新失敗");
+      } finally { btn.disabled = false; btn.textContent = original; }
+    });
+
+    document.getElementById("pwForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hide("pwError", "pwOk");
+      const oldPw  = document.getElementById("oldPassword").value;
+      const newPw  = document.getElementById("newPassword").value;
+      const newPw2 = document.getElementById("newPasswordConfirm").value;
+      if (!oldPw || !newPw) { showMsg("pwError", "請完整填寫"); return; }
+      if (newPw.length < 6 || newPw.length > 64) { showMsg("pwError", "新密碼長度需 6~64 字元"); return; }
+      if (newPw !== newPw2) { showMsg("pwError", "兩次輸入的新密碼不一致"); return; }
+      if (oldPw === newPw) { showMsg("pwError", "新密碼不可與舊密碼相同"); return; }
+      const btn = document.getElementById("pwSubmit");
+      btn.disabled = true; const original = btn.textContent; btn.textContent = "變更中…";
+      try {
+        await NongAuth.request("/api/account/password", {
+          method: "PUT", body: JSON.stringify({ oldPassword: oldPw, newPassword: newPw })
+        });
+        document.getElementById("pwForm").reset();
+        showMsg("pwOk", "密碼已變更,3 秒後自動登出,請以新密碼重新登入", true);
+        setTimeout(() => { NongAuth.logoutAll(); location.href = "login.html?reason=logout"; }, 3000);
+      } catch (err) {
+        showMsg("pwError", err.message || "變更失敗");
+      } finally { btn.disabled = false; btn.textContent = original; }
+    });
   })();
   </script>
 </body>

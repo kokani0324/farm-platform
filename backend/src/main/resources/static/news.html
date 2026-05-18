@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>最新消息｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="news">
+  <div id="headerHost"></div>
+  <section class="page-header">
+    <span class="eyebrow">news</span>
+    <h1>最新消息</h1>
+    <p>平台公告與重要更新。</p>
+  </section>
+  <main class="product-grid" id="newsGrid" style="max-width:1180px;margin:0 auto;padding:0 24px 64px">
+    <p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 0;">載入中…</p>
+  </main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="blogs.html">部落格</a><a href="products.html">看商品</a></div>
+  </footer>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (async function () {
+    const esc = NongHeader.escapeHtml;
+    const grid = document.getElementById("newsGrid");
+    try {
+      const page = await NongAuth.request("/api/news?size=24");
+      const list = page.content || [];
+      if (!list.length) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">目前沒有最新消息。</div>`; return; }
+      grid.innerHTML = list.map(n => {
+        const img = (n.coverImageUrl && n.coverImageUrl.trim()) || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900";
+        return `
+          <article class="product-card">
+            <a href="news-detail.html?id=${n.id}" class="product-image" style="background-image:url('${esc(img)}')" role="img"></a>
+            <div class="product-body">
+              <div class="product-meta"><span>${fmt(n.publishedAt)}</span><span>${esc(n.publishedBy || "管理員")}</span></div>
+              <h3><a href="news-detail.html?id=${n.id}">${esc(n.title)}</a></h3>
+              <p>${esc(n.summary || "")}</p>
+              <div class="product-meta" style="margin-top:8px"><a class="secondary-button" href="news-detail.html?id=${n.id}">閱讀全文</a></div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    } catch (e) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">載入失敗：${esc(e.message)}</div>`; }
+    function fmt(iso) { if (!iso) return ""; const d = new Date(iso); const p = (n)=>String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}`; }
+  })();
+  </script>
+</body>
+</html>

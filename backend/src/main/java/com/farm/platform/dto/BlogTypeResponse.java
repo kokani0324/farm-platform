@@ -14,6 +14,8 @@ public class BlogTypeResponse {
     private String description;
     private String icon;
     private Integer sortOrder;
+    /** 是否僅限小農可發表（前端按 type 篩 dropdown） */
+    private Boolean farmerOnly;
 
     public static BlogTypeResponse from(BlogType t) {
         return BlogTypeResponse.builder()
@@ -22,6 +24,7 @@ public class BlogTypeResponse {
                 .description(t.getDescription())
                 .icon(t.getIcon())
                 .sortOrder(t.getSortOrder())
+                .farmerOnly(Boolean.TRUE.equals(t.getFarmerOnly()))
                 .build();
     }
 }

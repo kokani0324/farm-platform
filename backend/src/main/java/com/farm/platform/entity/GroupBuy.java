@@ -40,11 +40,11 @@ public class GroupBuy {
     /** 團主(=發起人) */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "host_id", nullable = false)
-    private User host;
+    private Member host;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "farmer_id", nullable = false)
-    private User farmer;
+    private Farmer farmer;
 
     @Column(nullable = false)
     private Integer targetQuantity;

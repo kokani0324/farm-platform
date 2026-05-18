@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>體驗活動審核｜管理員後台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="admin" data-active-side="trip-audits">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">trip audits</span>
+          <h2>體驗活動審核</h2>
+          <p>處理小農送審的活動。通過後活動才會在前台上架，並可由小農進入「管理場次」開放預約。</p>
+        </div>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>活動</th><th>類別</th><th>計價</th><th>單價</th><th>小農</th><th>送審時間</th><th>操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="7" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="auditModal">
+    <div class="modal-card">
+      <h2 id="modalTitle">審核活動</h2>
+      <p id="modalSummary" style="color:var(--muted);font-size:14px;line-height:1.7"></p>
+      <form id="auditForm">
+        <input type="hidden" id="tripId">
+        <label class="field"><span>結果</span>
+          <select id="decision">
+            <option value="APPROVED">通過上架</option>
+            <option value="REJECTED">退回</option>
+          </select>
+        </label>
+        <label class="field"><span>意見（退回時必填，≤200 字）</span><textarea id="reason" maxlength="200" style="min-height:80px"></textarea></label>
+        <div class="modal-foot">
+          <button class="user-btn ghost" type="button" data-close-modal>取消</button>
+          <button class="primary-button" type="submit">送出</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/admin-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = AdminShell.escapeHtml;
+    const TYPE = { FARM_EXPERIENCE: "農場體驗", FIELD_VISIT: "產地參訪" };
+    const PRICING = { PER_PERSON: "每人", PER_WEIGHT: "每公斤" };
+    const rows = document.getElementById("rows");
+    await reload();
+
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest("[data-audit]");
+      if (a) { openModal(a.dataset.audit, a.dataset.title); return; }
+      if (e.target.matches("[data-close-modal]") || e.target.classList.contains("modal-backdrop"))
+        document.getElementById("auditModal").classList.remove("is-open");
+    });
+
+    document.getElementById("auditForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const tripId = document.getElementById("tripId").value;
+      const payload = {
+        decision: document.getElementById("decision").value,
+        reason: document.getElementById("reason").value.trim() || null,
+      };
+      if (payload.decision === "REJECTED" && !payload.reason) { toast("退回需填寫意見", true); return; }
+      try {
+        await NongAuth.request(`/api/admin/farm-trips/${tripId}/audit`, { method: "POST", body: JSON.stringify(payload) });
+        document.getElementById("auditModal").classList.remove("is-open");
+        toast("已處理");
+        await reload();
+      } catch (err) { toast(err.message || "失敗", true); }
+    });
+
+    function openModal(tripId, title) {
+      document.getElementById("tripId").value = tripId;
+      document.getElementById("modalTitle").textContent = `審核：${title}`;
+      document.getElementById("decision").value = "APPROVED";
+      document.getElementById("reason").value = "";
+      document.getElementById("auditModal").classList.add("is-open");
+    }
+
+    async function reload() {
+      try {
+        const page = await NongAuth.request("/api/admin/farm-trips/pending?size=30");
+        const list = page.content || [];
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted)">目前沒有待審核活動</td></tr>`; return; }
+        rows.innerHTML = list.map(t => `
+          <tr>
+            <td><strong>${esc(t.title)}</strong><div style="color:var(--muted);font-size:12px">${esc(t.location || "")}</div></td>
+            <td>${esc(TYPE[t.tripType] || t.tripType)}</td>
+            <td>${esc(PRICING[t.pricingMode] || "")}</td>
+            <td>NT$ ${Number(t.price).toLocaleString("zh-TW")}</td>
+            <td>${esc(t.farmerName || "")}</td>
+            <td>${fmt(t.createdAt)}</td>
+            <td><button class="user-btn ghost" data-audit="${t.id}" data-title="${esc(t.title)}" style="color:var(--leaf)">審核</button></td>
+          </tr>
+        `).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+
+    function fmt(iso) { if (!iso) return "—"; const d = new Date(iso); const p = (n)=>String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

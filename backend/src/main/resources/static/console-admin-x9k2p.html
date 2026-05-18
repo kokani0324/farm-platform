@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Console Admin</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body { background: #1a1a1a; color: #ddd; }
+    .auth-card { background: #2a2a2a; color: #ddd; border-color: #444; }
+    .field input { background: #1f1f1f; color: #ddd; border-color: #444; }
+    .auth-card h1 { color: #fff; }
+  </style>
+</head>
+<body data-page="auth">
+  <main class="auth-wrapper">
+    <section class="auth-card">
+      <span class="eyebrow">restricted</span>
+      <h1>Console Admin</h1>
+      <p class="auth-foot" style="text-align:left;margin:0 0 18px;color:#aaa">For authorized administrators only.</p>
+
+      <div class="auth-error" id="adminError"></div>
+
+      <form id="adminForm" novalidate>
+        <label class="field">
+          <span style="color:#aaa">Admin Email</span>
+          <input type="email" id="adminEmail" required autocomplete="off">
+        </label>
+        <label class="field">
+          <span style="color:#aaa">Password</span>
+          <input type="password" id="adminPassword" required autocomplete="off">
+        </label>
+        <button class="primary-button" type="submit">Sign in</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script>
+    (function () {
+      // 進入隱藏入口先清掉前端會話,避免帶舊 token
+      NongAuth.logoutAll();
+      const errBox = document.getElementById("adminError");
+      function showErr(msg) { errBox.textContent = msg; errBox.classList.add("is-visible"); }
+
+      document.getElementById("adminForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errBox.classList.remove("is-visible");
+        const email = document.getElementById("adminEmail").value.trim();
+        const password = document.getElementById("adminPassword").value;
+        if (!email || !password) { showErr("請輸入 Email 與密碼"); return; }
+        try {
+          const auth = await NongAuth.adminLogin(email, password);
+          NongAuth.saveSession(auth);
+          window.location.href = "admin.html";
+        } catch (err) {
+          showErr(err.message || "登入失敗");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

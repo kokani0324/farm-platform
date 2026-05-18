@@ -20,22 +20,78 @@ public class AdminController {
         return service.stats();
     }
 
-    /* ===== Users ===== */
+    /* ===== Members ===== */
+
+    @GetMapping("/members")
+    public PageResponse<AdminUserResponse> listMembers(@RequestParam(required = false) String keyword,
+                                                       @PageableDefault(size = 15) Pageable pageable) {
+        return service.listMembers(keyword, pageable);
+    }
+
+    @PostMapping("/members/{id}/enable")
+    public AdminUserResponse enableMember(@PathVariable Long id) {
+        return service.setMemberEnabled(id, true);
+    }
+
+    @PostMapping("/members/{id}/disable")
+    public AdminUserResponse disableMember(@PathVariable Long id) {
+        return service.setMemberEnabled(id, false);
+    }
+
+    /* ===== Farmers ===== */
+
+    @GetMapping("/farmers")
+    public PageResponse<AdminUserResponse> listFarmers(@RequestParam(required = false) String keyword,
+                                                       @PageableDefault(size = 15) Pageable pageable) {
+        return service.listFarmers(keyword, pageable);
+    }
+
+    @PostMapping("/farmers/{id}/enable")
+    public AdminUserResponse enableFarmer(@PathVariable Long id) {
+        return service.setFarmerEnabled(id, true);
+    }
+
+    @PostMapping("/farmers/{id}/disable")
+    public AdminUserResponse disableFarmer(@PathVariable Long id) {
+        return service.setFarmerEnabled(id, false);
+    }
+
+    @GetMapping("/farmers/pending")
+    public java.util.List<AdminFarmerReviewResponse> pendingFarmers() {
+        return service.listPendingFarmers();
+    }
+
+    @GetMapping("/farmers/{id}")
+    public AdminFarmerReviewResponse farmerDetail(@PathVariable Long id) {
+        return service.getFarmerDetail(id);
+    }
+
+    @PostMapping("/farmers/{id}/cert-pass")
+    public AdminFarmerReviewResponse passFarmerCert(@PathVariable Long id) {
+        return service.setFarmerCertPassed(id, true);
+    }
+
+    @PostMapping("/farmers/{id}/cert-reject")
+    public AdminFarmerReviewResponse rejectFarmerCert(@PathVariable Long id) {
+        return service.setFarmerCertPassed(id, false);
+    }
+
+    /* ===== Backwards-compat: /api/admin/users → 預設列出 Members ===== */
 
     @GetMapping("/users")
-    public PageResponse<AdminUserResponse> listUsers(@RequestParam(required = false) String keyword,
-                                                     @PageableDefault(size = 15) Pageable pageable) {
-        return service.listUsers(keyword, pageable);
+    public PageResponse<AdminUserResponse> listUsersLegacy(@RequestParam(required = false) String keyword,
+                                                           @PageableDefault(size = 15) Pageable pageable) {
+        return service.listMembers(keyword, pageable);
     }
 
     @PostMapping("/users/{id}/enable")
-    public AdminUserResponse enableUser(@PathVariable Long id) {
-        return service.setEnabled(id, true);
+    public AdminUserResponse enableUserLegacy(@PathVariable Long id) {
+        return service.setMemberEnabled(id, true);
     }
 
     @PostMapping("/users/{id}/disable")
-    public AdminUserResponse disableUser(@PathVariable Long id) {
-        return service.setEnabled(id, false);
+    public AdminUserResponse disableUserLegacy(@PathVariable Long id) {
+        return service.setMemberEnabled(id, false);
     }
 
     /* ===== Products ===== */

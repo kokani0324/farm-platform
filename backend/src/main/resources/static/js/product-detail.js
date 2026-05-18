@@ -46,6 +46,7 @@ function render(p) {
             <input type="number" id="qty" class="qty-input" value="1" min="1" max="${p.stock || 99}">
           </label>
           <button class="primary-button" id="addBtn">加入購物車</button>
+          <button class="secondary-button" id="wishBtn" title="加入收藏"><span id="wishIcon">♡</span> <span id="wishLabel">收藏</span></button>
           ${p.groupBuyEnabled ? `<button class="secondary-button" id="hostBtn">我要發起團購</button>` : ""}
           <span style="color:var(--muted);font-size:14px">剩餘庫存 ${p.stock ?? "—"}</span>
         </div>
@@ -64,6 +65,10 @@ function render(p) {
 
 function bindEvents() {
   document.getElementById("addBtn").addEventListener("click", addToCart);
+  const wishBtn = document.getElementById("wishBtn");
+  if (wishBtn) wishBtn.addEventListener("click", toggleWishlist);
+  // 初始化收藏狀態
+  syncWishlistState();
   const hostBtn = document.getElementById("hostBtn");
   if (hostBtn) hostBtn.addEventListener("click", openGroupBuyModal);
 
@@ -76,10 +81,51 @@ function bindEvents() {
   document.getElementById("groupBuyForm").addEventListener("submit", submitGroupBuy);
 }
 
+let inWishlist = false;
+async function syncWishlistState() {
+  const user = NongAuth.getConsumerUser();
+  if (!user || user.type !== "MEMBER") {
+    setWishlistUI(false);
+    return;
+  }
+  try {
+    const r = await NongAuth.request(`/api/wishlist/products/${product.id}/check`);
+    setWishlistUI(!!r.inWishlist);
+  } catch (_e) { setWishlistUI(false); }
+}
+function setWishlistUI(on) {
+  inWishlist = on;
+  const icon = document.getElementById("wishIcon");
+  const label = document.getElementById("wishLabel");
+  if (icon) icon.textContent = on ? "♥" : "♡";
+  if (label) label.textContent = on ? "已收藏" : "收藏";
+  const btn = document.getElementById("wishBtn");
+  if (btn) btn.style.color = on ? "var(--clay)" : "";
+}
+async function toggleWishlist() {
+  const user = NongAuth.getConsumerUser();
+  if (!user) { toast("請先登入"); setTimeout(() => location.href = "login.html", 700); return; }
+  if (user.type !== "MEMBER") { toast("非會員無法收藏", true); return; }
+  const btn = document.getElementById("wishBtn");
+  btn.disabled = true;
+  try {
+    if (inWishlist) {
+      await NongAuth.request(`/api/wishlist/products/${product.id}`, { method: "DELETE" });
+      setWishlistUI(false);
+      toast("已移除收藏");
+    } else {
+      await NongAuth.request(`/api/wishlist/products/${product.id}`, { method: "POST" });
+      setWishlistUI(true);
+      toast("已加入收藏");
+    }
+  } catch (e) { toast(e.message || "操作失敗", true); }
+  finally { btn.disabled = false; }
+}
+
 async function addToCart() {
   const user = NongAuth.getConsumerUser();
   if (!user) { toast("請先登入"); setTimeout(() => location.href = "login.html", 700); return; }
-  if ((user.activeRole || user.role) !== "CONSUMER") { toast("非消費者身份無法購買", true); return; }
+  if (user.type !== "MEMBER") { toast("非會員身份無法購買", true); return; }
   const qty = Math.max(1, Number(document.getElementById("qty").value) || 1);
   const btn = document.getElementById("addBtn");
   btn.disabled = true; btn.textContent = "加入中…";

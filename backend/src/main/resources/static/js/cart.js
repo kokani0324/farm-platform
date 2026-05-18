@@ -19,8 +19,8 @@ const cartView = document.getElementById("cartView");
     `;
     return;
   }
-  if ((user.activeRole || user.role) !== "CONSUMER") {
-    cartView.innerHTML = `<div class="empty-state">目前身份不是消費者，無法購物。</div>`;
+  if (user.type !== "MEMBER") {
+    cartView.innerHTML = `<div class="empty-state">目前身份不是會員，無法購物。</div>`;
     return;
   }
   await refresh();

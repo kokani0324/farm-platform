@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>登入｜你儂我農</title>
   <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .role-tabs { display: flex; gap: 8px; margin: 0 0 16px; }
+    .role-tab {
+      flex: 1; padding: 10px 12px; border-radius: var(--radius);
+      border: 1px solid var(--line); background: #fff; color: var(--muted);
+      font-size: 14px; font-family: inherit; cursor: pointer;
+    }
+    .role-tab.is-active { background: var(--leaf); color: #fff; border-color: var(--leaf); }
+    .register-links { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .register-links a { color: var(--leaf); }
+  </style>
 </head>
 <body data-page="auth">
   <header class="site-header">
@@ -14,15 +25,20 @@
     </a>
     <nav class="utility-nav">
       <a href="index.html">回到首頁</a>
-      <a href="register.html">註冊新帳號</a>
+      <a href="register.html">註冊會員</a>
     </nav>
   </header>
 
   <main class="auth-wrapper">
     <section class="auth-card">
-      <span class="eyebrow">member login</span>
+      <span class="eyebrow">member / farmer login</span>
       <h1>歡迎回來</h1>
-      <p class="auth-foot" style="text-align:left;margin:0 0 18px">消費者、小農、管理員共用同一入口；系統會依角色帶到對應頁面。</p>
+      <p class="auth-foot" style="text-align:left;margin:0 0 14px">請選擇身份後輸入帳號密碼。會員與小農為各自獨立的帳號。</p>
+
+      <div class="role-tabs" role="tablist">
+        <button type="button" class="role-tab is-active" data-role="MEMBER" role="tab">會員</button>
+        <button type="button" class="role-tab" data-role="FARMER" role="tab">小農</button>
+      </div>
 
       <div class="auth-error" id="loginError"></div>
 
@@ -38,21 +54,33 @@
         <button class="primary-button" type="submit">登入</button>
       </form>
 
-      <p class="auth-foot">還沒有帳號？<a href="register.html">立即註冊</a></p>
+      <div class="register-links">
+        <p class="auth-foot" style="margin:14px 0 0">還沒有會員帳號？<a href="register.html">註冊新會員</a></p>
+        <p class="auth-foot" style="margin:0">想成為小農？<a href="farmer-register.html">小農申請入口</a>（需審核）</p>
+      </div>
     </section>
   </main>
 
   <script src="js/auth.js"></script>
   <script>
     (function initLoginPage() {
-      // 進到登入頁就先清掉後台 session（避免帶著舊 token 重新登入）
       NongAuth.logoutBackoffice();
+      let currentRole = "MEMBER";
+
+      document.querySelectorAll(".role-tab").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".role-tab").forEach((b) => b.classList.remove("is-active"));
+          btn.classList.add("is-active");
+          currentRole = btn.dataset.role;
+        });
+      });
 
       const reason = new URLSearchParams(window.location.search).get("reason");
       const errorBox = document.getElementById("loginError");
-      if (reason === "auth")  showError("請先登入");
-      if (reason === "role")  showError("帳號角色不符，請重新登入");
-      if (reason === "logout") showError("您已登出");
+      if (reason === "auth")    showError("請先登入");
+      if (reason === "role")    showError("帳號身份不符，請重新登入");
+      if (reason === "logout")  showError("您已登出");
+      if (reason === "expired") showError("登入逾期，請重新登入");
 
       function showError(msg) {
         errorBox.textContent = msg;
@@ -67,7 +95,7 @@
         const password = document.getElementById("loginPassword").value;
         if (!email || !password) { showError("請輸入 Email 與密碼"); return; }
         try {
-          const auth = await NongAuth.login(email, password);
+          const auth = await NongAuth.login(email, password, currentRole);
           NongAuth.saveSession(auth);
           NongAuth.redirectAfterLogin(auth);
         } catch (err) {

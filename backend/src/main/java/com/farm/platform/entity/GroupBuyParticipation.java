@@ -34,7 +34,7 @@ public class GroupBuyParticipation {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private Member user;
 
     @Column(nullable = false)
     @Builder.Default

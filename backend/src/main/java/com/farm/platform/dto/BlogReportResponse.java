@@ -14,10 +14,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class BlogReportResponse {
     private Long id;
-    private String targetType;          // BLOG / COMMENT
+    private String targetType;
     private Long targetId;
     private String targetTitleOrContent;
-    private Long blogId;                // for COMMENT, the blog it belongs to
+    private Long blogId;
     private Long reporterId;
     private String reporterName;
     private String reason;

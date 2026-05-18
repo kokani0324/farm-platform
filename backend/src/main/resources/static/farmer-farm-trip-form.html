@@ -15,7 +15,7 @@
         <div>
           <span class="eyebrow">trip form</span>
           <h2 id="formTitle">新增體驗活動</h2>
-          <p>填寫活動內容、時間、地點與報名期間。</p>
+          <p>填寫活動本體；場次（日期/報名時間/容量）在儲存並通過審核後到「管理場次」單獨建立。</p>
         </div>
         <a class="user-btn ghost" href="farmer-farm-trips.html">← 回列表</a>
       </div>
@@ -23,24 +23,26 @@
       <article class="panel-card is-large" style="grid-column:1/-1">
         <form id="form">
           <div class="form-grid">
-            <label class="field"><span>類別</span><select id="categoryId" required></select></label>
             <label class="field"><span>類型</span>
               <select id="tripType" required>
-                <option value="FARM_EXPERIENCE">農場體驗營</option>
+                <option value="FARM_EXPERIENCE">農場體驗</option>
                 <option value="FIELD_VISIT">產地參訪</option>
               </select>
             </label>
+            <label class="field"><span>計價模式</span>
+              <select id="pricingMode" required>
+                <option value="PER_PERSON">每人定價</option>
+                <option value="PER_WEIGHT">按採收重量（每公斤）</option>
+              </select>
+            </label>
             <label class="field"><span>活動名稱（≤30 字）</span><input type="text" id="title" maxlength="30" required></label>
-            <label class="field"><span>單價 / 人</span><input type="number" id="price" min="0" step="1" required></label>
-            <label class="field"><span>名額</span><input type="number" id="capacity" min="1" required></label>
+            <label class="field"><span>單價（每人 / 每公斤）</span><input type="number" id="price" min="0" step="1" required></label>
+            <label class="field" id="capWrap"><span>每場容量（人）</span><input type="number" id="capacityPerSession" min="1" placeholder="按重量時可留空"></label>
             <label class="field"><span>地點</span><input type="text" id="location" maxlength="100"></label>
-            <label class="field"><span>活動開始</span><input type="datetime-local" id="tripStart" required></label>
-            <label class="field"><span>活動結束</span><input type="datetime-local" id="tripEnd" required></label>
-            <label class="field"><span>報名開放</span><input type="datetime-local" id="bookStart" required></label>
-            <label class="field"><span>報名截止</span><input type="datetime-local" id="bookEnd" required></label>
             <label class="field" style="grid-column:1/-1"><span>圖片網址</span><input type="url" id="imageUrl" maxlength="500" placeholder="https://..."></label>
           </div>
           <label class="field"><span>活動介紹（≤500 字）</span><textarea id="intro" maxlength="500" style="min-height:100px"></textarea></label>
+          <div class="info-banner" style="margin-top:12px">儲存後狀態為「審核中」，待管理員審核通過才會公開上架；通過後再到「管理場次」設定一場一場的日期與報名截止。</div>
           <div class="action-row" style="justify-content:flex-end">
             <a class="user-btn ghost" href="farmer-farm-trips.html">取消</a>
             <button class="primary-button" type="submit" id="saveBtn">儲存</button>
@@ -55,51 +57,50 @@
   <script src="js/farmer-shell.js"></script>
   <script>
   (async function () {
-    const esc = FarmerShell.escapeHtml;
     const id = new URLSearchParams(location.search).get("id");
     const isEdit = !!id;
     document.getElementById("formTitle").textContent = isEdit ? "編輯體驗活動" : "新增體驗活動";
 
-    // 載入活動類別
-    try {
-      const cats = await NongAuth.request("/api/farm-trips/categories");
-      const sel = document.getElementById("categoryId");
-      sel.innerHTML = `<option value="">請選擇類別</option>` + cats.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
-    } catch (e) { toast("類別載入失敗：" + e.message, true); }
+    const pricingSel = document.getElementById("pricingMode");
+    const capInput = document.getElementById("capacityPerSession");
+    const capWrap = document.getElementById("capWrap");
+    function syncCap() {
+      const isWeight = pricingSel.value === "PER_WEIGHT";
+      capInput.required = !isWeight;
+      capInput.disabled = isWeight;
+      capWrap.style.opacity = isWeight ? 0.5 : 1;
+      if (isWeight) capInput.value = "";
+    }
+    pricingSel.addEventListener("change", syncCap);
+    syncCap();
 
     if (isEdit) {
       try {
         const t = await NongAuth.request(`/api/farm-trips/${id}`);
-        document.getElementById("categoryId").value = t.categoryId || "";
         document.getElementById("tripType").value = t.tripType || "FARM_EXPERIENCE";
+        document.getElementById("pricingMode").value = t.pricingMode || "PER_PERSON";
         document.getElementById("title").value = t.title || "";
         document.getElementById("price").value = t.price;
-        document.getElementById("capacity").value = t.capacity;
+        document.getElementById("capacityPerSession").value = t.capacityPerSession ?? "";
         document.getElementById("location").value = t.location || "";
-        document.getElementById("tripStart").value = trimSeconds(t.tripStart);
-        document.getElementById("tripEnd").value = trimSeconds(t.tripEnd);
-        document.getElementById("bookStart").value = trimSeconds(t.bookStart);
-        document.getElementById("bookEnd").value = trimSeconds(t.bookEnd);
         document.getElementById("imageUrl").value = t.imageUrl || "";
         document.getElementById("intro").value = t.intro || "";
+        syncCap();
       } catch (e) { toast("活動載入失敗：" + e.message, true); }
     }
 
     document.getElementById("form").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const isWeight = pricingSel.value === "PER_WEIGHT";
       const payload = {
-        categoryId: Number(document.getElementById("categoryId").value) || null,
         tripType: document.getElementById("tripType").value,
+        pricingMode: pricingSel.value,
         title: document.getElementById("title").value.trim(),
         intro: document.getElementById("intro").value.trim() || null,
         imageUrl: document.getElementById("imageUrl").value.trim() || null,
         location: document.getElementById("location").value.trim() || null,
         price: Number(document.getElementById("price").value),
-        capacity: Number(document.getElementById("capacity").value),
-        tripStart: document.getElementById("tripStart").value,
-        tripEnd: document.getElementById("tripEnd").value,
-        bookStart: document.getElementById("bookStart").value,
-        bookEnd: document.getElementById("bookEnd").value
+        capacityPerSession: isWeight ? null : Number(document.getElementById("capacityPerSession").value),
       };
       const btn = document.getElementById("saveBtn");
       btn.disabled = true; btn.textContent = "儲存中…";
@@ -107,12 +108,11 @@
         const url = isEdit ? `/api/farmer/farm-trips/${id}` : "/api/farmer/farm-trips";
         const method = isEdit ? "PUT" : "POST";
         await NongAuth.request(url, { method, body: JSON.stringify(payload) });
-        toast("已儲存");
+        toast(isEdit ? "已更新" : "已送審");
         setTimeout(() => location.href = "farmer-farm-trips.html", 600);
       } catch (err) { toast(err.message || "儲存失敗", true); btn.disabled = false; btn.textContent = "儲存"; }
     });
 
-    function trimSeconds(iso) { if (!iso) return ""; return String(iso).slice(0, 16); }
     function toast(msg, isError) {
       const t = document.getElementById("toast"); if (!t) return;
       t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");

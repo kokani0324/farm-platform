@@ -26,12 +26,12 @@ public class BlogReport {
     /** 檢舉人 */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "reporter_id", nullable = false)
-    private User reporter;
+    private Member reporter;
 
     /** 處理的管理員 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "admin_id")
-    private User admin;
+    private Admin admin;
 
     @Column(nullable = false, length = 100)
     private String reason;

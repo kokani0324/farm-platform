@@ -715,9 +715,12 @@ button { cursor: pointer; }
 .product-card { overflow: hidden; }
 
 .product-image {
+  display: block;
   min-height: 210px;
   background-size: cover;
   background-position: center;
+  background-color: #eee;
+  background-repeat: no-repeat;
 }
 
 .img-mango  { background-image: url("https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=900&q=80"); }

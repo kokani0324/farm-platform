@@ -1,9 +1,9 @@
 package com.farm.platform.entity;
 
+/** 體驗活動本體狀態 (spec FARM_TRIP.status) */
 public enum FarmTripStatus {
-    ACTIVE,     // 招募中
-    FULL,       // 已額滿(到達 capacity)
-    CLOSED,     // 報名截止
-    CANCELLED,  // 小農取消
-    COMPLETED   // 活動已舉辦完畢
+    PENDING,    // 審核中
+    REJECTED,   // 審核未通過
+    ACTIVE,     // 上架開放中
+    CLOSED      // 已下架 / 關閉
 }

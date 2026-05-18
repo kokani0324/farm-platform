@@ -1,6 +1,7 @@
 package com.farm.platform.controller;
 
 import com.farm.platform.dto.*;
+import com.farm.platform.security.AccountPrincipal;
 import com.farm.platform.service.GroupBuyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -83,9 +84,9 @@ public class GroupBuyController {
 
     /** 團主、小農、團員：查看某團購的整單 */
     @GetMapping("/{id}/order")
-    public GroupBuyOrderResponse getOrder(@AuthenticationPrincipal UserDetails me,
+    public GroupBuyOrderResponse getOrder(@AuthenticationPrincipal AccountPrincipal me,
                                           @PathVariable Long id) {
-        return service.getGroupBuyOrder(me.getUsername(), id);
+        return service.getGroupBuyOrder(me, id);
     }
 
     /** 團主：列出我發起並成團的整單 */

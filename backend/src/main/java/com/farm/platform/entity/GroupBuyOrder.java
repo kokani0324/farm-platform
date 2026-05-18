@@ -40,11 +40,11 @@ public class GroupBuyOrder {
     /** 團主（即 GroupBuy.host） */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "host_id", nullable = false)
-    private User host;
+    private Member host;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "farmer_id", nullable = false)
-    private User farmer;
+    private Farmer farmer;
 
     /** 全團總數量（所有 JOINED 團員 quantity 加總） */
     @Column(nullable = false)

@@ -2,15 +2,16 @@ package com.farm.platform.service;
 
 import com.farm.platform.dto.CartDto;
 import com.farm.platform.dto.CartItemDto;
+import com.farm.platform.entity.Member;
 import com.farm.platform.entity.Product;
 import com.farm.platform.entity.ProductStatus;
-import com.farm.platform.entity.User;
+import com.farm.platform.repository.MemberRepository;
 import com.farm.platform.repository.ProductRepository;
-import com.farm.platform.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,29 +20,26 @@ import java.time.Duration;
 import java.util.*;
 
 /**
- * 購物車：以 Redis Hash 儲存。
- * key:        cart:{userId}
+ * 購物車：Redis Hash 儲存，僅 MEMBER 可使用。
+ * key:        cart:{memberId}
  * hashKey:    productId (String)
  * hashValue:  quantity  (String)
- * TTL:        application.yml app.cart.ttl-seconds（預設 30 天）
  */
 @Service
 @RequiredArgsConstructor
 public class CartService {
 
     private final StringRedisTemplate redis;
-    private final UserRepository userRepository;
+    private final MemberRepository memberRepository;
     private final ProductRepository productRepository;
 
     @Value("${app.cart.ttl-seconds:2592000}")
     private long ttlSeconds;
 
-    /* ============ 對外 API ============ */
-
     @Transactional(readOnly = true)
     public CartDto getCart(String email) {
-        Long userId = userId(email);
-        return buildDto(readRaw(userId));
+        Long memberId = memberId(email);
+        return buildDto(readRaw(memberId));
     }
 
     @Transactional(readOnly = true)
@@ -53,8 +51,8 @@ public class CartService {
             throw new IllegalArgumentException("商品已下架或售完");
         }
 
-        Long userId = userId(email);
-        String key = key(userId);
+        Long memberId = memberId(email);
+        String key = key(memberId);
         HashOperations<String, Object, Object> hash = redis.opsForHash();
 
         int existing = parseQty(hash.get(key, productId.toString()));
@@ -65,7 +63,7 @@ public class CartService {
         hash.put(key, productId.toString(), String.valueOf(target));
         redis.expire(key, Duration.ofSeconds(ttlSeconds));
 
-        return buildDto(readRaw(userId));
+        return buildDto(readRaw(memberId));
     }
 
     @Transactional(readOnly = true)
@@ -77,60 +75,59 @@ public class CartService {
             throw new IllegalArgumentException("數量超過庫存（剩 " + p.getStock() + " " + p.getUnit() + "）");
         }
 
-        Long userId = userId(email);
-        String key = key(userId);
+        Long memberId = memberId(email);
+        String key = key(memberId);
         if (!Boolean.TRUE.equals(redis.opsForHash().hasKey(key, productId.toString()))) {
             throw new IllegalArgumentException("購物車內沒有此商品");
         }
         redis.opsForHash().put(key, productId.toString(), String.valueOf(quantity));
         redis.expire(key, Duration.ofSeconds(ttlSeconds));
 
-        return buildDto(readRaw(userId));
+        return buildDto(readRaw(memberId));
     }
 
     @Transactional(readOnly = true)
     public CartDto removeItem(String email, Long productId) {
-        Long userId = userId(email);
-        String key = key(userId);
+        Long memberId = memberId(email);
+        String key = key(memberId);
         redis.opsForHash().delete(key, productId.toString());
-        return buildDto(readRaw(userId));
+        return buildDto(readRaw(memberId));
     }
 
     public void clear(String email) {
-        Long userId = userId(email);
-        redis.delete(key(userId));
+        Long memberId = memberId(email);
+        redis.delete(key(memberId));
     }
 
-    /** 給結帳用：取 userId + 所有 productId→quantity */
-    public Map<Long, Integer> getRawCart(Long userId) {
-        return readRaw(userId);
+    /** 給結帳用：取所有 productId→quantity */
+    public Map<Long, Integer> getRawCart(Long memberId) {
+        return readRaw(memberId);
     }
 
-    /** 給結帳用：清空（不重新讀使用者） */
-    public void clearByUserId(Long userId) {
-        redis.delete(key(userId));
+    /** 給結帳用：清空 */
+    public void clearByUserId(Long memberId) {
+        redis.delete(key(memberId));
     }
 
     /* ============ 內部 ============ */
 
-    private String key(Long userId) {
-        return "cart:" + userId;
+    private String key(Long memberId) {
+        return "cart:" + memberId;
     }
 
-    private Long userId(String email) {
-        User u = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("使用者不存在"));
-        return u.getId();
+    private Long memberId(String email) {
+        Member m = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("僅會員可使用購物車"));
+        return m.getId();
     }
 
-    private Map<Long, Integer> readRaw(Long userId) {
-        Map<Object, Object> all = redis.opsForHash().entries(key(userId));
+    private Map<Long, Integer> readRaw(Long memberId) {
+        Map<Object, Object> all = redis.opsForHash().entries(key(memberId));
         Map<Long, Integer> out = new LinkedHashMap<>();
         for (Map.Entry<Object, Object> e : all.entrySet()) {
             try {
                 out.put(Long.parseLong(e.getKey().toString()), parseQty(e.getValue()));
             } catch (NumberFormatException ignored) {
-                // 跳過壞資料
             }
         }
         return out;
@@ -145,7 +142,6 @@ public class CartService {
         }
     }
 
-    /** 把 raw cart 轉成附帶商品快照的 DTO；同時把不存在/下架的商品標 available=false */
     private CartDto buildDto(Map<Long, Integer> raw) {
         if (raw.isEmpty()) {
             return CartDto.builder()
@@ -167,7 +163,6 @@ public class CartService {
             int qty = e.getValue();
             Product p = byId.get(pid);
             if (p == null) {
-                // 商品被刪了，仍回傳一筆但 available=false
                 items.add(CartItemDto.builder()
                         .productId(pid)
                         .name("（已下架商品）")
@@ -192,7 +187,7 @@ public class CartService {
                     .subtotal(subtotal)
                     .available(available)
                     .farmerId(p.getFarmer().getId())
-                    .farmerName(p.getFarmer().getName())
+                    .farmerName(p.getFarmer().getFarmName())
                     .build());
             if (available) {
                 total = total.add(subtotal);

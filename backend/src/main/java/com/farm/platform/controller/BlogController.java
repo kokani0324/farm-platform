@@ -1,6 +1,7 @@
 package com.farm.platform.controller;
 
 import com.farm.platform.dto.*;
+import com.farm.platform.security.AccountPrincipal;
 import com.farm.platform.service.BlogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -48,28 +49,28 @@ public class BlogController {
     /* ===== 寫作(會員) ===== */
 
     @PostMapping
-    public BlogResponse create(@AuthenticationPrincipal UserDetails me,
+    public BlogResponse create(@AuthenticationPrincipal AccountPrincipal me,
                                @Valid @RequestBody BlogRequest req) {
-        return service.create(me.getUsername(), req);
+        return service.create(me, req);
     }
 
     @PutMapping("/{id}")
-    public BlogResponse update(@AuthenticationPrincipal UserDetails me,
+    public BlogResponse update(@AuthenticationPrincipal AccountPrincipal me,
                                @PathVariable Long id,
                                @Valid @RequestBody BlogRequest req) {
-        return service.update(me.getUsername(), id, req);
+        return service.update(me, id, req);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@AuthenticationPrincipal UserDetails me, @PathVariable Long id) {
-        service.delete(me.getUsername(), id);
+    public ResponseEntity<Void> delete(@AuthenticationPrincipal AccountPrincipal me, @PathVariable Long id) {
+        service.delete(me, id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/mine")
-    public PageResponse<BlogResponse> mine(@AuthenticationPrincipal UserDetails me,
+    public PageResponse<BlogResponse> mine(@AuthenticationPrincipal AccountPrincipal me,
                                            @PageableDefault(size = 10) Pageable pageable) {
-        return service.myBlogs(me.getUsername(), pageable);
+        return service.myBlogs(me, pageable);
     }
 
     /* ===== 互動 ===== */

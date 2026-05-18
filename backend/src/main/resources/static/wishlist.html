@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的收藏｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .wl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px; max-width:1180px; margin:0 auto; padding:0 24px 64px; }
+    .wl-card { background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.06); display:flex; flex-direction:column; transition:transform .15s, box-shadow .15s; }
+    .wl-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(74,124,42,.1); }
+    .wl-cover { height:170px; background:#eee center/cover no-repeat; display:block; }
+    .wl-body { padding:14px 16px 16px; display:flex; flex-direction:column; gap:6px; flex:1; }
+    .wl-meta { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; }
+    .wl-title { color:#3a463b; font-weight:600; font-size:16px; line-height:1.4; text-decoration:none; }
+    .wl-title:hover { color:var(--leaf); }
+    .wl-price { font-size:18px; font-weight:600; color:#3a463b; margin-top:auto; }
+    .wl-price small { color:var(--muted); font-weight:400; font-size:13px; }
+    .wl-actions { display:flex; gap:8px; margin-top:8px; }
+    .wl-actions .primary-button { flex:1; padding:8px 10px; font-size:13px; }
+    .wl-actions .icon-btn { background:#fff4f0; color:var(--clay); border:none; border-radius:10px; padding:0 12px; cursor:pointer; font-size:16px; }
+    .wl-actions .icon-btn:hover { background:#fde0d4; }
+    .wl-card.is-unavailable .wl-cover { filter:grayscale(0.8); }
+    .wl-badge-out { color:var(--clay); font-size:12px; font-weight:600; }
+  </style>
+</head>
+<body data-page="consumer" data-active-nav="">
+  <div id="headerHost"></div>
+  <section class="page-header">
+    <span class="eyebrow">my wishlist</span>
+    <h1>我的收藏</h1>
+    <p id="subtitle">把喜歡的商品先收進來，方便下次回購或追蹤庫存。</p>
+  </section>
+  <main class="wl-grid" id="grid">
+    <p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 0;">載入中…</p>
+  </main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="products.html">繼續逛商品</a></div>
+  </footer>
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (async function () {
+    const esc = NongHeader.escapeHtml;
+    const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
+    const grid = document.getElementById("grid");
+
+    const user = NongAuth.getConsumerUser();
+    if (!user) { location.href = "login.html?reason=auth"; return; }
+    if (user.type !== "MEMBER") {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">目前身份不是會員，無法使用收藏。</div>`;
+      return;
+    }
+
+    await reload();
+
+    grid.addEventListener("click", async (e) => {
+      const rm = e.target.closest("[data-remove]");
+      if (rm) {
+        const id = rm.dataset.remove;
+        try { await NongAuth.request(`/api/wishlist/products/${id}`, { method: "DELETE" }); toast("已移除"); await reload(); }
+        catch (err) { toast(err.message || "失敗", true); }
+        return;
+      }
+      const ad = e.target.closest("[data-add-cart]");
+      if (ad) {
+        const id = ad.dataset.addCart;
+        ad.disabled = true; const ot = ad.textContent; ad.textContent = "加入中…";
+        try {
+          await NongAuth.request("/api/cart/items", { method: "POST", body: JSON.stringify({ productId: Number(id), quantity: 1 }) });
+          toast("已加入購物車");
+          if (NongHeader.refreshCartBadge) await NongHeader.refreshCartBadge();
+        } catch (err) { toast(err.message || "失敗", true); }
+        finally { ad.disabled = false; ad.textContent = ot; }
+      }
+    });
+
+    async function reload() {
+      try {
+        const page = await NongAuth.request("/api/wishlist?size=48");
+        const list = page.content || [];
+        document.getElementById("subtitle").textContent =
+          list.length === 0
+            ? "把喜歡的商品先收進來，方便下次回購或追蹤庫存。"
+            : `目前收藏了 ${list.length} 個商品。`;
+        if (!list.length) {
+          grid.innerHTML = `
+            <div class="empty-state" style="grid-column:1/-1">
+              還沒有收藏任何商品。
+              <a class="primary-button" href="products.html" style="margin-left:12px">去逛商品</a>
+            </div>`;
+          return;
+        }
+        grid.innerHTML = list.map(it => {
+          const img = (it.imageUrl && it.imageUrl.trim()) || "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=900";
+          return `
+            <article class="wl-card ${it.available ? "" : "is-unavailable"}">
+              <a href="product-detail.html?id=${it.productId}" class="wl-cover" style="background-image:url('${esc(img)}')" role="img" aria-label="${esc(it.name)}"></a>
+              <div class="wl-body">
+                <div class="wl-meta"><span>${esc(it.farmerName || "")}</span><span>${esc(it.categoryName || "")}</span></div>
+                <a href="product-detail.html?id=${it.productId}" class="wl-title">${esc(it.name)}</a>
+                ${it.available ? "" : `<div class="wl-badge-out">⚠ 已下架或缺貨</div>`}
+                <div class="wl-price">${currency(it.price)} <small>/ ${esc(it.unit || "件")}</small></div>
+                <div class="wl-actions">
+                  <button class="primary-button" data-add-cart="${it.productId}" ${it.available ? "" : "disabled"}>加入購物車</button>
+                  <button class="icon-btn" data-remove="${it.productId}" title="移除收藏">♥</button>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join("");
+      } catch (e) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">載入失敗：${esc(e.message)}</div>`; }
+    }
+
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

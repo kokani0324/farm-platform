@@ -16,7 +16,8 @@ const FarmerShell = (function () {
     { key: "group-buys",  label: "我的團購活動", href: "farmer-group-buys.html" },
     { key: "gb-orders",   label: "團購整單",   href: "farmer-group-buy-orders.html" },
     { key: "farm-trips",  label: "體驗活動",   href: "farmer-farm-trips.html" },
-    { key: "trip-bookings", label: "體驗預約管理", href: "farmer-farm-trip-bookings.html" }
+    { key: "trip-bookings", label: "體驗預約管理", href: "farmer-farm-trip-bookings.html" },
+    { key: "blogs",       label: "我的部落格",   href: "farmer-blogs.html" }
   ];
 
   function init() {

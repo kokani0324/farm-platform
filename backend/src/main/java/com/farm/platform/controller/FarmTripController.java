@@ -22,16 +22,10 @@ public class FarmTripController {
 
     /* ===== 公開瀏覽 ===== */
 
-    @GetMapping("/categories")
-    public List<FarmTripCategoryResponse> categories() {
-        return service.listCategories();
-    }
-
     @GetMapping
-    public PageResponse<FarmTripResponse> list(@RequestParam(required = false) Long categoryId,
-                                               @RequestParam(required = false) TripType tripType,
+    public PageResponse<FarmTripResponse> list(@RequestParam(required = false) TripType tripType,
                                                @PageableDefault(size = 12) Pageable pageable) {
-        return service.listPublic(categoryId, tripType, pageable);
+        return service.listPublic(tripType, pageable);
     }
 
     @GetMapping("/{id}")
@@ -39,24 +33,37 @@ public class FarmTripController {
         return service.getDetail(id);
     }
 
-    /* ===== 消費者:預約 ===== */
-
-    @PostMapping("/{id}/bookings")
-    public FarmTripBookingResponse book(@AuthenticationPrincipal UserDetails me,
-                                        @PathVariable Long id,
-                                        @Valid @RequestBody CreateFarmTripBookingRequest req) {
-        return service.book(me.getUsername(), id, req);
+    @GetMapping("/{id}/comments")
+    public List<FarmTripCommentResponse> comments(@PathVariable Long id,
+                                                  @RequestParam(defaultValue = "20") int size) {
+        return service.listComments(id, Math.min(size, 100));
     }
 
-    @PostMapping("/bookings/{bookingId}/cancel")
-    public FarmTripBookingResponse cancel(@AuthenticationPrincipal UserDetails me,
-                                          @PathVariable Long bookingId) {
-        return service.cancelBooking(me.getUsername(), bookingId);
+    /* ===== 消費者：預約 / 評論 ===== */
+
+    @PostMapping("/sessions/{sessionId}/orders")
+    public FarmTripOrderResponse book(@AuthenticationPrincipal UserDetails me,
+                                      @PathVariable Long sessionId,
+                                      @Valid @RequestBody CreateFarmTripOrderRequest req) {
+        return service.bookSession(me.getUsername(), sessionId, req);
     }
 
-    @GetMapping("/bookings/mine")
-    public PageResponse<FarmTripBookingResponse> mine(@AuthenticationPrincipal UserDetails me,
-                                                      @PageableDefault(size = 10) Pageable pageable) {
-        return service.myBookings(me.getUsername(), pageable);
+    @PostMapping("/orders/{orderId}/cancel")
+    public FarmTripOrderResponse cancel(@AuthenticationPrincipal UserDetails me,
+                                        @PathVariable Long orderId) {
+        return service.cancelOrder(me.getUsername(), orderId);
+    }
+
+    @GetMapping("/orders/mine")
+    public PageResponse<FarmTripOrderResponse> mine(@AuthenticationPrincipal UserDetails me,
+                                                    @PageableDefault(size = 10) Pageable pageable) {
+        return service.myOrders(me.getUsername(), pageable);
+    }
+
+    @PostMapping("/{id}/comments")
+    public FarmTripCommentResponse postComment(@AuthenticationPrincipal UserDetails me,
+                                               @PathVariable Long id,
+                                               @Valid @RequestBody FarmTripCommentRequest req) {
+        return service.comment(me.getUsername(), id, req);
     }
 }

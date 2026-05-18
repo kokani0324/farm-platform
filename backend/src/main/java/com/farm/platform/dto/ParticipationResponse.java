@@ -65,7 +65,7 @@ public class ParticipationResponse {
                 .productName(gb.getProduct().getName())
                 .productImageUrl(gb.getProduct().getImageUrl())
                 .productUnit(gb.getProduct().getUnit())
-                .farmerName(gb.getFarmer().getName())
+                .farmerName(gb.getFarmer().getFarmName())
                 .userId(p.getUser().getId())
                 .userName(p.getUser().getName())
                 .isHost(p.getIsHost())

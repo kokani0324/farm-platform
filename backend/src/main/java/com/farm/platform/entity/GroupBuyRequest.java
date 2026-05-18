@@ -31,12 +31,12 @@ public class GroupBuyRequest {
     /** 發起人(消費者) */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "initiator_id", nullable = false)
-    private User initiator;
+    private Member initiator;
 
     /** 該商品的小農(反 3NF,查詢方便) */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "farmer_id", nullable = false)
-    private User farmer;
+    private Farmer farmer;
 
     @Column(nullable = false)
     private Integer targetQuantity;

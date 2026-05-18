@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小農審核｜管理員後台</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .review-grid { display: grid; grid-template-columns: minmax(260px, 320px) 1fr; gap: 24px; }
+    @media (max-width: 900px) { .review-grid { grid-template-columns: 1fr; } }
+    .review-list { display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow-y: auto; }
+    .review-list-item { padding: 12px 14px; border-radius: 10px; background: var(--surface, #fff); border: 1px solid var(--line, #e2e2dc); cursor: pointer; transition: background .15s; }
+    .review-list-item:hover { background: var(--bg-soft, #f3f0e6); }
+    .review-list-item.is-active { background: var(--accent-soft, #eaf3df); border-color: var(--accent, #4a7c2a); }
+    .review-list-item .farm-name { font-weight: 600; }
+    .review-list-item .email { font-size: 12px; color: var(--muted, #888); }
+    .review-detail { padding: 20px; background: var(--surface, #fff); border-radius: 12px; border: 1px solid var(--line, #e2e2dc); }
+    .detail-row { display: flex; gap: 12px; margin-bottom: 10px; }
+    .detail-row dt { width: 100px; color: var(--muted, #888); flex-shrink: 0; }
+    .detail-row dd { margin: 0; flex: 1; }
+    .action-row { margin-top: 24px; display: flex; gap: 12px; }
+    .action-row .approve { background: var(--accent, #4a7c2a); color: #fff; }
+    .action-row .reject { background: #c0392b; color: #fff; }
+    .empty-hint { text-align: center; color: var(--muted, #888); padding: 40px 20px; }
+  </style>
+</head>
+<body data-page="admin" data-active-side="farmer-reviews">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout admin-tone">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">farmer reviews</span>
+          <h2>小農送審</h2>
+          <p>新註冊的小農預設 cert_passed=false，需在此通過審核後才能登入後台。</p>
+        </div>
+        <span class="session-pill" id="pendingCount">— 筆待審</span>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <div class="review-grid">
+          <div class="review-list" id="reviewList">
+            <div class="empty-hint">載入中…</div>
+          </div>
+          <div class="review-detail" id="reviewDetail">
+            <div class="empty-hint">從左側選一筆待審小農查看詳情</div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/admin-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = AdminShell.escapeHtml;
+    const fmt = (iso) => {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+    const CERT_LABEL = { IDENTITY: "身分證明", LAND: "土地證明", PRODUCT: "農產品證明" };
+    const listEl = document.getElementById("reviewList");
+    const detailEl = document.getElementById("reviewDetail");
+    const countEl = document.getElementById("pendingCount");
+    let pending = [];
+    let activeId = null;
+
+    await reload();
+
+    listEl.addEventListener("click", (e) => {
+      const item = e.target.closest("[data-id]");
+      if (!item) return;
+      activeId = Number(item.dataset.id);
+      renderList();
+      renderDetail();
+    });
+
+    detailEl.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (!activeId) return;
+      if (action === "approve") {
+        if (!confirm(`確定通過此小農的審核？`)) return;
+        try {
+          await NongAuth.request(`/api/admin/farmers/${activeId}/cert-pass`, { method: "POST" });
+          toast("已通過");
+          activeId = null;
+          await reload();
+        } catch (err) { toast(err.message || "操作失敗", true); }
+      } else if (action === "reject") {
+        if (!confirm(`確定駁回此小農的審核？（會把 cert_passed 設回 false）`)) return;
+        try {
+          await NongAuth.request(`/api/admin/farmers/${activeId}/cert-reject`, { method: "POST" });
+          toast("已駁回");
+          activeId = null;
+          await reload();
+        } catch (err) { toast(err.message || "操作失敗", true); }
+      }
+    });
+
+    async function reload() {
+      try {
+        pending = await NongAuth.request("/api/admin/farmers/pending");
+        countEl.textContent = `${pending.length} 筆待審`;
+        renderList();
+        renderDetail();
+      } catch (e) {
+        listEl.innerHTML = `<div class="empty-hint" style="color:var(--clay)">載入失敗：${esc(e.message)}</div>`;
+      }
+    }
+
+    function renderList() {
+      if (!pending.length) {
+        listEl.innerHTML = `<div class="empty-hint">目前沒有待審小農 🎉</div>`;
+        return;
+      }
+      listEl.innerHTML = pending.map((f) => `
+        <div class="review-list-item ${f.id === activeId ? "is-active" : ""}" data-id="${f.id}">
+          <div class="farm-name">${esc(f.farmName || "(未填農場名)")}</div>
+          <div class="email">${esc(f.email)}</div>
+          <div class="email">送出 ${fmt(f.createdAt)}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderDetail() {
+      if (!activeId) {
+        detailEl.innerHTML = `<div class="empty-hint">從左側選一筆待審小農查看詳情</div>`;
+        return;
+      }
+      const f = pending.find((x) => x.id === activeId);
+      if (!f) {
+        detailEl.innerHTML = `<div class="empty-hint">找不到此筆資料</div>`;
+        return;
+      }
+      detailEl.innerHTML = `
+        <h3 style="margin-top:0">${esc(f.farmName || "(未填農場名)")}</h3>
+        <dl>
+          <div class="detail-row"><dt>Email</dt><dd>${esc(f.email)}</dd></div>
+          <div class="detail-row"><dt>聯絡電話</dt><dd>${esc(f.phone || "—")}</dd></div>
+          <div class="detail-row"><dt>農場地址</dt><dd>${esc(f.farmAddress || "—")}</dd></div>
+          <div class="detail-row"><dt>農場介紹</dt><dd style="white-space:pre-wrap">${esc(f.farmDesc || "—")}</dd></div>
+          <div class="detail-row"><dt>證明文件</dt><dd>${esc(CERT_LABEL[f.certType] || f.certType || "—")} ・ ${f.hasCertFile ? "✅ 已上傳" : "❌ 未上傳"}</dd></div>
+          <div class="detail-row"><dt>上傳時間</dt><dd>${fmt(f.uploadedAt)}</dd></div>
+          <div class="detail-row"><dt>註冊時間</dt><dd>${fmt(f.createdAt)}</dd></div>
+          <div class="detail-row"><dt>目前狀態</dt><dd>cert_passed=${f.certPassed ? "true" : "false"} ・ status=${esc(f.status)}</dd></div>
+        </dl>
+        <div class="action-row">
+          <button class="primary-button approve" data-action="approve">✅ 通過審核</button>
+          <button class="primary-button reject" data-action="reject">❌ 駁回</button>
+        </div>
+      `;
+    }
+
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

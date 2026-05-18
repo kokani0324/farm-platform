@@ -30,23 +30,24 @@
 
     async function reload() {
       try {
-        const page = await NongAuth.request("/api/farm-trips/bookings/mine?size=30");
+        const page = await NongAuth.request("/api/farm-trips/orders/mine?size=30");
         const list = page.content || [];
         if (!list.length) { view.innerHTML = `<div class="empty-state">還沒預約過活動。<a class="primary-button" href="farm-trips.html" style="margin-left:8px">去看活動</a></div>`; return; }
+        const PRICING = { PER_PERSON: "每人計價", PER_WEIGHT: "按重量計價（現場結算）" };
         view.innerHTML = `
           <table class="cart-table">
-            <thead><tr><th>編號</th><th>活動</th><th>日期</th><th>人數</th><th>金額</th><th>狀態</th><th></th></tr></thead>
+            <thead><tr><th>編號</th><th>活動 / 計價</th><th>場次</th><th>人數</th><th>金額</th><th>狀態</th><th></th></tr></thead>
             <tbody>${list.map((b) => `
               <tr data-id="${b.id}">
                 <td><strong>${esc(b.bookingNo || "")}</strong></td>
-                <td>${esc(b.farmTripTitle || "")}<div style="color:var(--muted);font-size:12px">${esc(b.farmerName || "")} ｜ ${esc(b.farmTripLocation || "")}</div></td>
-                <td>${fmt(b.farmTripStart)}</td>
+                <td>${esc(b.farmTripTitle || "")}<div style="color:var(--muted);font-size:12px">${esc(b.farmerName || "")} ｜ ${esc(b.farmTripLocation || "")}</div><div style="color:var(--muted);font-size:12px">${esc(PRICING[b.pricingMode] || "")}</div></td>
+                <td>${fmt(b.sessionTripStart)}</td>
                 <td>${b.numPeople || 0}</td>
-                <td>${currency(b.totalAmount || 0)}</td>
+                <td>${b.pricingMode === "PER_WEIGHT" && b.status !== "COMPLETED" ? `<span style="color:var(--muted)">現場結算</span>` : currency(b.totalAmount || 0)}</td>
                 <td><span class="status-tag ${tagCls(b.status)}">${esc(b.status || "")}</span></td>
                 <td>
                   <a class="user-btn ghost" href="farm-trip-detail.html?id=${b.farmTripId}">查看</a>
-                  ${b.status === "CONFIRMED" || b.status === "BOOKED" ? `<button class="user-btn ghost" data-cancel="${b.id}" style="color:var(--clay)">取消</button>` : ""}
+                  ${b.status === "CONFIRMED" ? `<button class="user-btn ghost" data-cancel="${b.id}" style="color:var(--clay)">取消</button>` : ""}
                 </td>
               </tr>
             `).join("")}</tbody>
@@ -55,7 +56,7 @@
         document.querySelectorAll("[data-cancel]").forEach((btn) => btn.addEventListener("click", async () => {
           if (!confirm("確定要取消這個預約嗎？")) return;
           try {
-            await NongAuth.request(`/api/farm-trips/bookings/${btn.dataset.cancel}/cancel`, { method: "POST" });
+            await NongAuth.request(`/api/farm-trips/orders/${btn.dataset.cancel}/cancel`, { method: "POST" });
             toast("已取消");
             await reload();
           } catch (e) { toast(e.message || "取消失敗", true); }

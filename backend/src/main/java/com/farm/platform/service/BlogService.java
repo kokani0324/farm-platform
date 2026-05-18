@@ -3,6 +3,7 @@ package com.farm.platform.service;
 import com.farm.platform.dto.*;
 import com.farm.platform.entity.*;
 import com.farm.platform.repository.*;
+import com.farm.platform.security.AccountPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,7 +26,10 @@ public class BlogService {
     private final BlogCommentRepository commentRepo;
     private final BlogReportRepository reportRepo;
     private final BlogCommentReportRepository commentReportRepo;
-    private final UserRepository userRepo;
+    private final MemberRepository memberRepo;
+    private final FarmerRepository farmerRepo;
+    private final AdminRepository adminRepo;
+    private final ProductRepository productRepo;
 
     /* ============================ 公開瀏覽 ============================ */
 
@@ -52,47 +56,96 @@ public class BlogService {
     /* ============================ 寫作 ============================ */
 
     @Transactional
-    public BlogResponse create(String email, BlogRequest req) {
-        User author = getUser(email);
+    public BlogResponse create(AccountPrincipal me, BlogRequest req) {
         BlogType type = typeRepo.findById(req.getBlogTypeId())
                 .orElseThrow(() -> new IllegalArgumentException("分類不存在"));
-        Blog b = Blog.builder()
-                .author(author)
+        checkTypePermission(type, me);
+        Blog.BlogBuilder builder = Blog.builder()
                 .blogType(type)
                 .title(req.getTitle())
                 .content(req.getContent())
                 .coverImageUrl(req.getCoverImageUrl())
-                .status(BlogStatus.PUBLISHED)
-                .build();
-        return BlogResponse.from(blogRepo.save(b));
+                .status(BlogStatus.PUBLISHED);
+        if (me.getType() == AccountType.MEMBER) {
+            builder.authorMember(memberRepo.findById(me.getId())
+                    .orElseThrow(() -> new AccessDeniedException("會員不存在")));
+        } else if (me.getType() == AccountType.FARMER) {
+            builder.authorFarmer(farmerRepo.findById(me.getId())
+                    .orElseThrow(() -> new AccessDeniedException("小農不存在")));
+        } else {
+            throw new AccessDeniedException("管理員不能發文");
+        }
+        Blog saved = blogRepo.save(builder.build());
+        setFeaturedProducts(saved, req.getProductIds(), me);
+        return BlogResponse.from(saved);
     }
 
     @Transactional
-    public BlogResponse update(String email, Long id, BlogRequest req) {
+    public BlogResponse update(AccountPrincipal me, Long id, BlogRequest req) {
         Blog b = blogRepo.findFullById(id)
                 .orElseThrow(() -> new IllegalArgumentException("文章不存在"));
-        if (!b.getAuthor().getEmail().equals(email)) throw new AccessDeniedException("無權編輯");
+        checkOwnership(b, me);
         if (b.getStatus() == BlogStatus.HIDDEN) throw new IllegalStateException("被管理員隱藏的文章無法編輯");
         BlogType type = typeRepo.findById(req.getBlogTypeId())
                 .orElseThrow(() -> new IllegalArgumentException("分類不存在"));
+        checkTypePermission(type, me);
         b.setBlogType(type);
         b.setTitle(req.getTitle());
         b.setContent(req.getContent());
         b.setCoverImageUrl(req.getCoverImageUrl());
+        setFeaturedProducts(b, req.getProductIds(), me);
         return BlogResponse.from(b);
     }
 
+    private void checkTypePermission(BlogType type, AccountPrincipal me) {
+        boolean isFarmerOnly = Boolean.TRUE.equals(type.getFarmerOnly());
+        if (me.getType() == AccountType.FARMER && !isFarmerOnly) {
+            throw new AccessDeniedException("小農只能在「產地日記」類別發表文章");
+        }
+        if (me.getType() == AccountType.MEMBER && isFarmerOnly) {
+            throw new AccessDeniedException("「" + type.getName() + "」僅限小農發表");
+        }
+    }
+
+    private void setFeaturedProducts(Blog blog, List<Long> productIds, AccountPrincipal me) {
+        if (productIds == null) return;
+        List<Product> products = productIds.isEmpty()
+                ? new java.util.ArrayList<>()
+                : productRepo.findAllById(productIds);
+        // 小農端只能介紹自己的商品（避免幫他人廣告）；會員端可自由介紹任意上架商品。
+        if (me.getType() == AccountType.FARMER) {
+            for (Product p : products) {
+                if (p.getFarmer() == null || !p.getFarmer().getId().equals(me.getId())) {
+                    throw new AccessDeniedException("只能介紹自己上架的商品");
+                }
+            }
+        }
+        blog.getFeaturedProducts().clear();
+        blog.getFeaturedProducts().addAll(products);
+    }
+
     @Transactional
-    public void delete(String email, Long id) {
+    public void delete(AccountPrincipal me, Long id) {
         Blog b = blogRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("文章不存在"));
-        if (!b.getAuthor().getEmail().equals(email)) throw new AccessDeniedException("無權刪除");
+        checkOwnership(b, me);
         b.setStatus(BlogStatus.DELETED);
     }
 
-    public PageResponse<BlogResponse> myBlogs(String email, Pageable pageable) {
-        User me = getUser(email);
-        return PageResponse.of(blogRepo.findByAuthorOrderByCreatedAtDesc(me, pageable), BlogResponse::summary);
+    public PageResponse<BlogResponse> myBlogs(AccountPrincipal me, Pageable pageable) {
+        Page<Blog> page;
+        if (me.getType() == AccountType.MEMBER) {
+            Member m = memberRepo.findById(me.getId())
+                    .orElseThrow(() -> new AccessDeniedException("會員不存在"));
+            page = blogRepo.findByAuthorMemberOrderByCreatedAtDesc(m, pageable);
+        } else if (me.getType() == AccountType.FARMER) {
+            Farmer f = farmerRepo.findById(me.getId())
+                    .orElseThrow(() -> new AccessDeniedException("小農不存在"));
+            page = blogRepo.findByAuthorFarmerOrderByCreatedAtDesc(f, pageable);
+        } else {
+            throw new AccessDeniedException("管理員無文章");
+        }
+        return PageResponse.of(page, BlogResponse::summary);
     }
 
     /* ============================ 按讚 ============================ */
@@ -116,7 +169,7 @@ public class BlogService {
 
     @Transactional
     public BlogCommentResponse addComment(String email, Long blogId, BlogCommentRequest req) {
-        User author = getUser(email);
+        Member author = getMember(email);
         Blog b = blogRepo.findById(blogId)
                 .orElseThrow(() -> new IllegalArgumentException("文章不存在"));
         if (b.getStatus() != BlogStatus.PUBLISHED) throw new IllegalStateException("此文章已不接受留言");
@@ -146,10 +199,11 @@ public class BlogService {
 
     @Transactional
     public void reportBlog(String email, Long blogId, BlogReportRequest req) {
-        User reporter = getUser(email);
+        Member reporter = getMember(email);
         Blog b = blogRepo.findById(blogId)
                 .orElseThrow(() -> new IllegalArgumentException("文章不存在"));
-        if (b.getAuthor().getId().equals(reporter.getId())) {
+        if (b.getAuthorType() == AccountType.MEMBER
+                && b.getAuthorId() != null && b.getAuthorId().equals(reporter.getId())) {
             throw new IllegalStateException("無法檢舉自己的文章");
         }
         if (reportRepo.existsByBlogAndReporter(b, reporter)) {
@@ -162,7 +216,7 @@ public class BlogService {
 
     @Transactional
     public void reportComment(String email, Long commentId, BlogReportRequest req) {
-        User reporter = getUser(email);
+        Member reporter = getMember(email);
         BlogComment c = commentRepo.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("留言不存在"));
         if (c.getAuthor().getId().equals(reporter.getId())) {
@@ -194,7 +248,7 @@ public class BlogService {
 
     @Transactional
     public BlogReportResponse adminHandleBlogReport(String adminEmail, Long reportId, HandleReportRequest req) {
-        User admin = getUser(adminEmail);
+        Admin admin = getAdmin(adminEmail);
         BlogReport r = reportRepo.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("檢舉不存在"));
         if (r.getStatus() != BlogReportStatus.PENDING) throw new IllegalStateException("已處理");
@@ -213,7 +267,7 @@ public class BlogService {
 
     @Transactional
     public BlogReportResponse adminHandleCommentReport(String adminEmail, Long reportId, HandleReportRequest req) {
-        User admin = getUser(adminEmail);
+        Admin admin = getAdmin(adminEmail);
         BlogCommentReport r = commentReportRepo.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("檢舉不存在"));
         if (r.getStatus() != BlogReportStatus.PENDING) throw new IllegalStateException("已處理");
@@ -243,8 +297,20 @@ public class BlogService {
 
     /* ============================ helpers ============================ */
 
-    private User getUser(String email) {
-        return userRepo.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("使用者不存在"));
+    private Member getMember(String email) {
+        return memberRepo.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("會員帳號不存在"));
+    }
+
+    private Admin getAdmin(String email) {
+        return adminRepo.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("管理員不存在"));
+    }
+
+    private void checkOwnership(Blog b, AccountPrincipal me) {
+        if (b.getAuthorType() == null || b.getAuthorType() != me.getType()
+                || b.getAuthorId() == null || !b.getAuthorId().equals(me.getId())) {
+            throw new AccessDeniedException("無權編輯此文章");
+        }
     }
 }

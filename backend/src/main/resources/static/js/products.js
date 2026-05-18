@@ -128,7 +128,7 @@ async function addToCart(productId, btn) {
     setTimeout(() => location.href = "login.html", 800);
     return;
   }
-  if ((user.activeRole || user.role) !== "CONSUMER") {
+  if (user.type !== "MEMBER") {
     toast("小農 / 管理員身份無法購買", true);
     return;
   }

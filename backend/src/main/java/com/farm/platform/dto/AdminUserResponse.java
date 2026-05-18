@@ -1,14 +1,14 @@
 package com.farm.platform.dto;
 
-import com.farm.platform.entity.Role;
-import com.farm.platform.entity.User;
+import com.farm.platform.entity.AccountStatus;
+import com.farm.platform.entity.AccountType;
+import com.farm.platform.entity.Farmer;
+import com.farm.platform.entity.Member;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Data
 @Builder
@@ -18,23 +18,38 @@ public class AdminUserResponse {
     private String email;
     private String name;
     private String phone;
-    private Role primaryRole;
-    private Set<Role> roles;
-    private Boolean enabled;
+    private AccountType type;
+    private AccountStatus status;
+    /** 對 FARMER 才有意義，否則 null */
+    private Boolean certPassed;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static AdminUserResponse from(User u) {
+    public static AdminUserResponse fromMember(Member m) {
         return AdminUserResponse.builder()
-                .id(u.getId())
-                .email(u.getEmail())
-                .name(u.getName())
-                .phone(u.getPhone())
-                .primaryRole(u.getRole())
-                .roles(u.getRoles() == null ? Set.of() : u.getRoles().stream().collect(Collectors.toSet()))
-                .enabled(u.getEnabled())
-                .createdAt(u.getCreatedAt())
-                .updatedAt(u.getUpdatedAt())
+                .id(m.getId())
+                .email(m.getEmail())
+                .name(m.getName())
+                .phone(m.getPhone())
+                .type(AccountType.MEMBER)
+                .status(m.getStatus())
+                .certPassed(null)
+                .createdAt(m.getCreatedAt())
+                .updatedAt(m.getUpdatedAt())
+                .build();
+    }
+
+    public static AdminUserResponse fromFarmer(Farmer f) {
+        return AdminUserResponse.builder()
+                .id(f.getId())
+                .email(f.getEmail())
+                .name(f.getFarmName())
+                .phone(f.getPhone())
+                .type(AccountType.FARMER)
+                .status(f.getStatus())
+                .certPassed(f.getCertPassed())
+                .createdAt(f.getCreatedAt())
+                .updatedAt(f.getUpdatedAt())
                 .build();
     }
 }

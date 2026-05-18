@@ -44,7 +44,7 @@ public class OrderResponse {
                 .id(o.getId())
                 .orderNo(o.getOrderNo())
                 .farmerId(o.getFarmer().getId())
-                .farmerName(o.getFarmer().getName())
+                .farmerName(o.getFarmer().getFarmName())
                 .consumerId(o.getConsumer().getId())
                 .consumerName(o.getConsumer().getName())
                 .status(o.getStatus())

@@ -5,6 +5,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>體驗活動詳情｜你儂我農</title>
   <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .month-block { margin-top:24px; }
+    .month-head { display:flex; align-items:baseline; gap:10px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid #eee; }
+    .month-head .m { font-size:22px; font-weight:600; color:#3a463b; }
+    .month-head .c { color:var(--muted); font-size:14px; }
+    .session-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px; }
+    .session-card {
+      background:#fff; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:10px;
+      box-shadow:0 1px 4px rgba(0,0,0,.06); transition:transform .15s, box-shadow .15s; position:relative;
+    }
+    .session-card:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(74,124,42,.12); }
+    .session-card.is-disabled { opacity:.55; background:#f7f4ec; }
+    .session-card.is-disabled:hover { transform:none; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+    .session-day { display:flex; align-items:baseline; gap:8px; }
+    .session-day .dom { font-size:32px; font-weight:700; color:var(--leaf); line-height:1; }
+    .session-day .mo { color:var(--muted); font-size:14px; }
+    .session-day .wd { margin-left:auto; padding:2px 10px; border-radius:999px; background:#f0eee5; color:var(--muted); font-size:12px; font-weight:600; }
+    .session-time { color:#3a463b; font-size:15px; font-weight:500; }
+    .session-meta { color:var(--muted); font-size:13px; line-height:1.7; }
+    .session-meta strong { color:#3a463b; }
+    .session-price { font-size:18px; font-weight:600; color:#3a463b; }
+    .session-price small { color:var(--muted); font-weight:400; font-size:13px; }
+    .session-card .book-btn {
+      margin-top:auto; padding:10px 14px; border:none; border-radius:10px; cursor:pointer;
+      background:var(--leaf); color:#fff; font-weight:600; font-size:14px;
+    }
+    .session-card .book-btn:hover:not(:disabled) { background:#3d6a23; }
+    .session-card .book-btn:disabled { background:#cccac0; cursor:not-allowed; }
+    .session-card .badge-tag {
+      position:absolute; top:14px; right:14px; padding:3px 10px; border-radius:999px;
+      font-size:11px; font-weight:600;
+    }
+    .badge-soon { background:#fff4e0; color:#a86b1e; }
+    .badge-low { background:#fde8e1; color:var(--clay); }
+    .badge-cancelled { background:#f0eee5; color:var(--muted); }
+    .info-banner { background:#fff4e0; color:#7a5418; border-radius:10px; padding:10px 14px; margin:12px 0; font-size:14px; line-height:1.7; }
+  </style>
 </head>
 <body data-page="consumer" data-active-nav="farm-trips">
   <div id="headerHost"></div>
@@ -15,7 +52,7 @@
   <div class="modal-backdrop" id="bookModal">
     <div class="modal-card">
       <h2>預約體驗活動</h2>
-      <p style="color:var(--muted);margin:4px 0 16px">填寫聯絡資訊與人數，平台會通知小農。</p>
+      <div id="sessionSummary" style="background:#f7f4ec;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:14px;line-height:1.6"></div>
       <form id="bookForm">
         <div class="form-grid">
           <label class="field"><span>聯絡人姓名</span><input type="text" id="contactName" maxlength="50" required></label>

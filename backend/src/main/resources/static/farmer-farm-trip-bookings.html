@@ -13,28 +13,42 @@
     <section class="dashboard-main">
       <div class="dashboard-hero">
         <div>
-          <span class="eyebrow">trip bookings</span>
+          <span class="eyebrow">trip orders</span>
           <h2>體驗預約管理</h2>
-          <p>消費者對你舉辦的活動的預約紀錄。</p>
+          <p>消費者對你舉辦的活動的預約紀錄；PER_WEIGHT 訂單需手動補登重量完成。</p>
         </div>
         <div class="action-row">
-          <button class="user-btn ghost" data-filter="">全部</button>
-          <button class="user-btn ghost" data-filter="BOOKED">已預約</button>
-          <button class="user-btn ghost" data-filter="CONFIRMED">已確認</button>
-          <button class="user-btn ghost" data-filter="CANCELLED">已取消</button>
+          <button class="user-btn ghost is-active" data-filter="">全部</button>
+          <button class="user-btn ghost" data-filter="CONFIRMED">已預約</button>
           <button class="user-btn ghost" data-filter="COMPLETED">已完成</button>
+          <button class="user-btn ghost" data-filter="CANCELLED">已取消</button>
         </div>
       </div>
 
       <article class="panel-card is-large" style="grid-column:1/-1">
         <table class="data-table">
-          <thead><tr><th>編號</th><th>活動</th><th>聯絡人</th><th>人數</th><th>金額</th><th>狀態</th><th>預約時間</th></tr></thead>
-          <tbody id="rows"><tr><td colspan="7" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+          <thead><tr><th>編號</th><th>活動 / 場次</th><th>聯絡人</th><th>人數</th><th>單價</th><th>金額</th><th>狀態</th><th>操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="8" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
         </table>
       </article>
     </section>
   </main>
 
+  <div class="modal-backdrop" id="completeModal">
+    <div class="modal-card">
+      <h2>補登實際採收重量</h2>
+      <p style="color:var(--muted);margin:4px 0 16px">總金額 = 實際公斤 × 場次單價。</p>
+      <form id="completeForm">
+        <label class="field"><span>實際採收重量（公斤）</span><input type="number" id="actualWeight" min="0.01" step="0.01" required></label>
+        <div class="modal-foot">
+          <button class="user-btn ghost" type="button" data-close-modal>取消</button>
+          <button class="primary-button" type="submit">完成訂單</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-flash" id="toast"></div>
   <script src="js/auth.js"></script>
   <script src="js/farmer-shell.js"></script>
   <script>
@@ -42,32 +56,80 @@
     const esc = FarmerShell.escapeHtml;
     const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
     const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n) => String(n).padStart(2,"0"); return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+    const PRICING = { PER_PERSON: "每人", PER_WEIGHT: "每公斤" };
     const rows = document.getElementById("rows");
     let currentFilter = "";
+    let completeOrderId = null;
 
     await reload();
     document.querySelectorAll("[data-filter]").forEach((btn) => btn.addEventListener("click", async () => {
+      document.querySelectorAll("[data-filter]").forEach(b => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
       currentFilter = btn.dataset.filter; await reload();
     }));
 
+    document.addEventListener("click", (e) => {
+      const c = e.target.closest("[data-complete]");
+      if (c) { completeOrderId = c.dataset.complete; document.getElementById("actualWeight").value = ""; document.getElementById("completeModal").classList.add("is-open"); return; }
+      const ck = e.target.closest("[data-complete-perperson]");
+      if (ck) { completePerPerson(ck.dataset.completePerperson); return; }
+      if (e.target.matches("[data-close-modal]") || e.target.classList.contains("modal-backdrop")) document.getElementById("completeModal").classList.remove("is-open");
+    });
+
+    document.getElementById("completeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const w = Number(document.getElementById("actualWeight").value);
+      try {
+        await NongAuth.request(`/api/farmer/farm-trip-orders/${completeOrderId}/complete`, { method: "POST", body: JSON.stringify({ actualWeight: w }) });
+        document.getElementById("completeModal").classList.remove("is-open");
+        toast("已完成");
+        await reload();
+      } catch (err) { toast(err.message || "失敗", true); }
+    });
+
+    async function completePerPerson(id) {
+      if (!confirm("確認完成此訂單？金額將直接以下單金額作結。")) return;
+      try { await NongAuth.request(`/api/farmer/farm-trip-orders/${id}/complete`, { method: "POST", body: JSON.stringify({}) }); toast("已完成"); await reload(); }
+      catch (e) { toast(e.message || "失敗", true); }
+    }
+
     async function reload() {
       try {
-        const url = "/api/farmer/farm-trip-bookings?size=30" + (currentFilter ? `&status=${currentFilter}` : "");
+        const url = "/api/farmer/farm-trip-orders?size=30" + (currentFilter ? `&status=${currentFilter}` : "");
         const page = await NongAuth.request(url);
         const list = page.content || [];
-        if (!list.length) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted)">沒有符合的預約。</td></tr>`; return; }
-        rows.innerHTML = list.map((b) => `
-          <tr>
-            <td><strong>${esc(b.bookingNo || "")}</strong></td>
-            <td>${esc(b.farmTripTitle || "")}<div style="color:var(--muted);font-size:12px">${fmt(b.farmTripStart)}</div></td>
-            <td>${esc(b.contactName || "")}<div style="color:var(--muted);font-size:12px">${esc(b.contactPhone || "")}</div></td>
-            <td>${b.numPeople || 0}</td>
-            <td>${currency(b.totalAmount || 0)}</td>
-            <td><span class="status ${b.status === "CANCELLED" ? "warning" : ""}">${esc(b.status)}</span></td>
-            <td>${fmt(b.bookedAt)}</td>
-          </tr>
-        `).join("");
-      } catch (e) { rows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted)">沒有符合的預約。</td></tr>`; return; }
+        rows.innerHTML = list.map((b) => {
+          const isPerWeight = b.pricingMode === "PER_WEIGHT";
+          let actionBtn = "";
+          if (b.status === "CONFIRMED") {
+            actionBtn = isPerWeight
+              ? `<button class="user-btn ghost" data-complete="${b.id}" style="color:var(--leaf)">補登重量並完成</button>`
+              : `<button class="user-btn ghost" data-complete-perperson="${b.id}" style="color:var(--leaf)">完成</button>`;
+          }
+          const amount = (isPerWeight && b.status !== "COMPLETED")
+            ? `<span style="color:var(--muted)">現場結算</span>`
+            : currency(b.totalAmount || 0);
+          return `
+            <tr>
+              <td><strong>${esc(b.bookingNo || "")}</strong></td>
+              <td>${esc(b.farmTripTitle || "")}<div style="color:var(--muted);font-size:12px">${fmt(b.sessionTripStart)} ｜ ${esc(PRICING[b.pricingMode] || "")}</div></td>
+              <td>${esc(b.contactName || "")}<div style="color:var(--muted);font-size:12px">${esc(b.contactPhone || "")}</div></td>
+              <td>${b.numPeople || 0}</td>
+              <td>${currency(b.unitPrice || 0)}</td>
+              <td>${amount}${b.actualWeight ? `<div style="color:var(--muted);font-size:12px">${b.actualWeight} kg</div>` : ""}</td>
+              <td><span class="status ${b.status === "CANCELLED" ? "warning" : (b.status === "COMPLETED" ? "" : "muted")}">${esc(b.status)}</span></td>
+              <td>${actionBtn}</td>
+            </tr>
+          `;
+        }).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
     }
   })();
   </script>

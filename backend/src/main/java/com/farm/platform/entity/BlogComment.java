@@ -24,7 +24,7 @@ public class BlogComment {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "author_id", nullable = false)
-    private User author;
+    private Member author;
 
     @Column(nullable = false, length = 200)
     private String content;

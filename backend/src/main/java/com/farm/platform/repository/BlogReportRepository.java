@@ -3,7 +3,7 @@ package com.farm.platform.repository;
 import com.farm.platform.entity.Blog;
 import com.farm.platform.entity.BlogReport;
 import com.farm.platform.entity.BlogReportStatus;
-import com.farm.platform.entity.User;
+import com.farm.platform.entity.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,7 +14,7 @@ public interface BlogReportRepository extends JpaRepository<BlogReport, Long> {
 
     Page<BlogReport> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
-    boolean existsByBlogAndReporter(Blog blog, User reporter);
+    boolean existsByBlogAndReporter(Blog blog, Member reporter);
 
     long countByStatus(BlogReportStatus status);
 }

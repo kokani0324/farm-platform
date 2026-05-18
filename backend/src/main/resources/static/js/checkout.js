@@ -12,8 +12,8 @@ const view = document.getElementById("checkoutView");
 (async function init() {
   const user = NongAuth.getConsumerUser();
   if (!user) { location.href = "login.html?reason=auth"; return; }
-  if ((user.activeRole || user.role) !== "CONSUMER") {
-    view.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">目前身份不是消費者，無法結帳。</div>`; return;
+  if (user.type !== "MEMBER") {
+    view.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">目前身份不是會員，無法結帳。</div>`; return;
   }
   let cart;
   try { cart = await NongAuth.request("/api/cart"); }

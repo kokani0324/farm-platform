@@ -1,8 +1,8 @@
 package com.farm.platform.repository;
 
+import com.farm.platform.entity.Farmer;
 import com.farm.platform.entity.Product;
 import com.farm.platform.entity.ProductStatus;
-import com.farm.platform.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,7 +16,9 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     /** 小農查詢自己的商品 */
-    List<Product> findByFarmerOrderByCreatedAtDesc(User farmer);
+    List<Product> findByFarmerOrderByCreatedAtDesc(Farmer farmer);
+
+    boolean existsByNameAndFarmer(String name, Farmer farmer);
 
     /**
      * 公開瀏覽：依分類 / 關鍵字搜尋 + 分頁
@@ -41,7 +43,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             SELECT p FROM Product p
             WHERE (:keyword IS NULL OR :keyword = ''
                    OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(p.farmer.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+                   OR LOWER(p.farmer.farmName) LIKE LOWER(CONCAT('%', :keyword, '%')))
             ORDER BY p.createdAt DESC
             """)
     Page<Product> adminSearch(@Param("keyword") String keyword, Pageable pageable);

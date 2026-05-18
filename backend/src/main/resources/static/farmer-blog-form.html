@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新增 / 編輯文章｜小農工作台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="farmer" data-active-side="blogs">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">write</span>
+          <h2 id="formTitle">新增文章</h2>
+          <p>小農可以寫產地日記、食材料理、營養知識等所有分類，並把自家上架商品連結到文章。</p>
+        </div>
+        <a class="user-btn ghost" href="farmer-blogs.html">← 回我的文章</a>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <form id="blogForm">
+          <div class="form-grid">
+            <label class="field"><span>分類</span><select id="blogTypeId" required></select></label>
+            <label class="field"><span>標題（≤60 字）</span><input type="text" id="title" maxlength="60" required></label>
+            <label class="field" style="grid-column:1/-1"><span>封面圖網址</span><input type="url" id="coverImageUrl" maxlength="500" placeholder="https://..."></label>
+          </div>
+          <label class="field"><span>內文</span><textarea id="content" maxlength="50000" required style="min-height:280px"></textarea></label>
+
+          <div class="field">
+            <span>文中介紹的商品（你自家上架的，最多 6 項；讀者可從文章內加入購物車）</span>
+            <div id="productPicker" style="max-height:220px;overflow:auto;background:#f7f4ec;border-radius:8px;padding:10px 12px;font-size:14px">
+              <p style="color:var(--muted);margin:4px 0">載入商品中…</p>
+            </div>
+          </div>
+
+          <div class="action-row" style="justify-content:flex-end">
+            <a class="user-btn ghost" href="farmer-blogs.html">取消</a>
+            <button class="primary-button" type="submit" id="saveBtn">儲存</button>
+          </div>
+        </form>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/farmer-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = FarmerShell.escapeHtml;
+    const id = new URLSearchParams(location.search).get("id");
+    const isEdit = !!id;
+    document.getElementById("formTitle").textContent = isEdit ? "編輯文章" : "新增文章";
+
+    const farmer = NongAuth.getBackofficeUser();
+    if (!farmer) return;
+
+    // 小農發文僅限「產地日記」類別
+    let diaryTypeId = null;
+    try {
+      const types = await NongAuth.request("/api/blogs/types");
+      const diary = (types || []).find(t => t.name === "產地日記" || t.farmerOnly);
+      if (!diary) { toast("找不到產地日記類別，請聯絡管理員", true); return; }
+      diaryTypeId = diary.id;
+      const sel = document.getElementById("blogTypeId");
+      sel.innerHTML = `<option value="${diary.id}" selected>🌾 ${esc(diary.name)}（小農限定）</option>`;
+      sel.disabled = true;
+      sel.style.background = "#f7f4ec";
+      sel.style.cursor = "not-allowed";
+    } catch (e) { toast("分類載入失敗：" + e.message, true); }
+
+    // 商品列表：撈小農自己的商品（/api/farmer/products 直接回陣列）
+    const selectedIds = new Set();
+    let products = [];
+    try {
+      const list = await NongAuth.request("/api/farmer/products");
+      products = (Array.isArray(list) ? list : []).filter(p => p.status === "ACTIVE");
+      renderProductPicker();
+    } catch (e) { document.getElementById("productPicker").innerHTML = `<p style="color:var(--muted)">商品載入失敗：${e.message}</p>`; }
+
+    function renderProductPicker() {
+      const wrap = document.getElementById("productPicker");
+      if (!products.length) { wrap.innerHTML = `<p style="color:var(--muted);margin:4px 0">尚無上架商品可介紹。</p>`; return; }
+      wrap.innerHTML = products.map(p => `
+        <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer">
+          <input type="checkbox" data-pid="${p.id}" ${selectedIds.has(p.id) ? "checked" : ""}>
+          <span>${esc(p.name)} <small style="color:var(--muted)">NT$ ${Number(p.price).toLocaleString("zh-TW")} / ${esc(p.unit || "件")}</small></span>
+        </label>
+      `).join("");
+      wrap.onchange = (e) => {
+        if (!e.target.matches("[data-pid]")) return;
+        const pid = Number(e.target.dataset.pid);
+        if (e.target.checked) {
+          if (selectedIds.size >= 6) { e.target.checked = false; toast("最多選 6 項", true); return; }
+          selectedIds.add(pid);
+        } else selectedIds.delete(pid);
+      };
+    }
+
+    if (isEdit) {
+      try {
+        const b = await NongAuth.request(`/api/blogs/${id}`);
+        document.getElementById("blogTypeId").value = b.blogTypeId || "";
+        document.getElementById("title").value = b.title || "";
+        document.getElementById("coverImageUrl").value = b.coverImageUrl || "";
+        document.getElementById("content").value = b.content || "";
+        (b.featuredProducts || []).forEach(p => selectedIds.add(p.id));
+        renderProductPicker();
+      } catch (e) { toast("文章載入失敗：" + e.message, true); }
+    }
+
+    document.getElementById("blogForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        blogTypeId: Number(document.getElementById("blogTypeId").value) || null,
+        title: document.getElementById("title").value.trim(),
+        content: document.getElementById("content").value.trim(),
+        coverImageUrl: document.getElementById("coverImageUrl").value.trim() || null,
+        productIds: Array.from(selectedIds)
+      };
+      const btn = document.getElementById("saveBtn");
+      btn.disabled = true; btn.textContent = "儲存中…";
+      try {
+        const url = isEdit ? `/api/blogs/${id}` : "/api/blogs";
+        const method = isEdit ? "PUT" : "POST";
+        await NongAuth.request(url, { method, body: JSON.stringify(payload) });
+        toast("已儲存");
+        setTimeout(() => location.href = "farmer-blogs.html", 600);
+      } catch (err) { toast(err.message || "儲存失敗", true); btn.disabled = false; btn.textContent = "儲存"; }
+    });
+
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>

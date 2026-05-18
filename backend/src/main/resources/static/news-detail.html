@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>最新消息詳情｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="news">
+  <div id="headerHost"></div>
+  <main id="newsView" style="max-width:920px;margin:0 auto;padding:32px 24px 64px">
+    <p style="text-align:center;color:var(--muted);padding:48px 0;">載入中…</p>
+  </main>
+  <footer class="site-footer">
+    <div><strong>你儂我農</strong><p>CFA104 第二組專題</p></div>
+    <div class="footer-links"><a href="news.html">回最新消息</a></div>
+  </footer>
+  <script src="js/auth.js"></script><script src="js/header.js"></script>
+  <script>
+  (async function () {
+    const esc = NongHeader.escapeHtml;
+    const view = document.getElementById("newsView");
+    const id = new URLSearchParams(location.search).get("id");
+    if (!id) { view.innerHTML = `<div class="empty-state">缺少消息 id</div>`; return; }
+    try {
+      const n = await NongAuth.request(`/api/news/${id}`);
+      const cover = n.coverImageUrl && n.coverImageUrl.trim()
+        ? `<div class="detail-cover" style="background-image:url('${esc(n.coverImageUrl)}');min-height:300px;margin-bottom:22px"></div>` : "";
+      view.innerHTML = `
+        <article class="detail-body">
+          <span class="eyebrow">最新消息</span>
+          <h1 style="margin:6px 0 14px;font-size:clamp(28px,4vw,44px);line-height:1.2">${esc(n.title)}</h1>
+          <div class="meta-row" style="color:var(--muted);font-size:13px;margin-bottom:18px">
+            <span>發布：${fmt(n.publishedAt)}</span>
+            <span>${esc(n.publishedBy || "管理員")}</span>
+          </div>
+          ${cover}
+          ${n.summary ? `<p style="background:#f7f4ec;border-radius:8px;padding:14px 16px;line-height:1.9">${esc(n.summary)}</p>` : ""}
+          <div style="white-space:pre-wrap;line-height:2;color:#3a463b;font-size:16px;margin-top:16px">${esc(n.content || "")}</div>
+        </article>
+      `;
+    } catch (e) { view.innerHTML = `<div class="empty-state">載入失敗：${esc(e.message)}</div>`; }
+    function fmt(iso) { if (!iso) return ""; const d = new Date(iso); const p = (n)=>String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}`; }
+  })();
+  </script>
+</body>
+</html>

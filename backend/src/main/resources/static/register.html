@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>註冊｜你儂我農</title>
+  <title>會員註冊｜你儂我農</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body data-page="auth">
@@ -20,34 +20,36 @@
 
   <main class="auth-wrapper">
     <section class="auth-card">
-      <span class="eyebrow">create account</span>
-      <h1>建立你的帳號</h1>
-      <p class="auth-foot" style="text-align:left;margin:0 0 18px">小農註冊後預設停用，須由管理員啟用方可登入後台。</p>
-
-      <div class="auth-tabs" role="tablist">
-        <button type="button" data-role="CONSUMER" class="is-active">註冊為消費者</button>
-        <button type="button" data-role="FARMER">註冊為小農</button>
-      </div>
+      <span class="eyebrow">member sign up</span>
+      <h1>建立會員帳號</h1>
+      <p class="auth-foot" style="text-align:left;margin:0 0 14px">會員可瀏覽商品、加入購物車、參加團購、預約體驗活動。<br>想成為小農請走「<a href="farmer-register.html">小農申請入口</a>」(需審核)。</p>
 
       <div class="auth-error" id="registerError"></div>
 
       <form id="registerForm" novalidate>
-        <input type="hidden" name="role" id="regRole" value="CONSUMER">
         <label class="field">
           <span>姓名</span>
-          <input type="text" id="regName" required>
+          <input type="text" id="regName" maxlength="50" required>
+        </label>
+        <label class="field">
+          <span>暱稱(選填)</span>
+          <input type="text" id="regNickname" maxlength="50">
         </label>
         <label class="field">
           <span>Email</span>
-          <input type="email" id="regEmail" required autocomplete="email">
+          <input type="email" id="regEmail" maxlength="50" required autocomplete="email">
         </label>
         <label class="field">
-          <span>密碼（6-50 字元）</span>
-          <input type="password" id="regPassword" minlength="6" maxlength="50" required autocomplete="new-password">
+          <span>密碼(6-64 字元)</span>
+          <input type="password" id="regPassword" minlength="6" maxlength="64" required autocomplete="new-password">
         </label>
         <label class="field">
-          <span>電話（選填）</span>
-          <input type="text" id="regPhone" maxlength="20">
+          <span>電話(選填)</span>
+          <input type="tel" id="regPhone" maxlength="20" placeholder="09xx-xxx-xxx">
+        </label>
+        <label class="field">
+          <span>地址(選填)</span>
+          <input type="text" id="regAddress" maxlength="100">
         </label>
         <button class="primary-button" type="submit">建立帳號</button>
       </form>
@@ -60,17 +62,6 @@
   <script>
     (function initRegisterPage() {
       const errorBox = document.getElementById("registerError");
-      const tabs = document.querySelectorAll(".auth-tabs button");
-      const roleInput = document.getElementById("regRole");
-
-      tabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-          tabs.forEach((t) => t.classList.remove("is-active"));
-          tab.classList.add("is-active");
-          roleInput.value = tab.dataset.role;
-        });
-      });
-
       function showError(msg) {
         errorBox.textContent = msg;
         errorBox.classList.add("is-visible");
@@ -81,22 +72,17 @@
         errorBox.classList.remove("is-visible");
         const payload = {
           name: document.getElementById("regName").value.trim(),
+          nickname: document.getElementById("regNickname").value.trim() || null,
           email: document.getElementById("regEmail").value.trim(),
           password: document.getElementById("regPassword").value,
           phone: document.getElementById("regPhone").value.trim() || null,
-          role: roleInput.value
+          address: document.getElementById("regAddress").value.trim() || null
         };
         if (!payload.name || !payload.email || !payload.password) {
           showError("姓名、Email、密碼皆為必填"); return;
         }
         try {
-          const auth = await NongAuth.register(payload);
-          if (payload.role === "FARMER") {
-            // 小農預設 disabled，先導去 login 並提示
-            alert("註冊成功！小農帳號需由管理員啟用後才能登入。");
-            window.location.href = "login.html";
-            return;
-          }
+          const auth = await NongAuth.memberRegister(payload);
           NongAuth.saveSession(auth);
           NongAuth.redirectAfterLogin(auth);
         } catch (err) {

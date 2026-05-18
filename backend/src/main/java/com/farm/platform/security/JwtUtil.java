@@ -1,5 +1,6 @@
 package com.farm.platform.security;
 
+import com.farm.platform.entity.AccountType;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -12,7 +13,10 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 
 /**
- * JWT 產生與驗證工具
+ * JWT 產生與驗證工具(Phase A 重構版):
+ *  - subject = email
+ *  - claim "type"  = MEMBER | FARMER | ADMIN(AccountType)
+ *  - claim "aid"   = accountId(對應表的 PK)
  */
 @Component
 public class JwtUtil {
@@ -27,14 +31,13 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
-    /** 產生 token，subject 放 email，extra claim 放 role */
-    public String generateToken(String email, String role) {
+    public String generateToken(String email, AccountType type, Long accountId) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
-
         return Jwts.builder()
                 .subject(email)
-                .claim("role", role)
+                .claim("type", type.name())
+                .claim("aid", accountId)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)
@@ -45,17 +48,19 @@ public class JwtUtil {
         return parse(token).getSubject();
     }
 
-    public String extractRole(String token) {
-        return parse(token).get("role", String.class);
+    public AccountType extractType(String token) {
+        String raw = parse(token).get("type", String.class);
+        return raw == null ? null : AccountType.valueOf(raw);
+    }
+
+    public Long extractAccountId(String token) {
+        Number n = parse(token).get("aid", Number.class);
+        return n == null ? null : n.longValue();
     }
 
     public boolean isValid(String token) {
-        try {
-            parse(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
+        try { parse(token); return true; }
+        catch (JwtException | IllegalArgumentException e) { return false; }
     }
 
     private Claims parse(String token) {

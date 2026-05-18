@@ -1,5 +1,13 @@
 package com.farm.platform.security;
 
+import com.farm.platform.entity.AccountStatus;
+import com.farm.platform.entity.AccountType;
+import com.farm.platform.entity.Admin;
+import com.farm.platform.entity.Farmer;
+import com.farm.platform.entity.Member;
+import com.farm.platform.repository.AdminRepository;
+import com.farm.platform.repository.FarmerRepository;
+import com.farm.platform.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -7,20 +15,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
 
 /**
- * 每個 request 都會經過此 filter，
- * 從 Authorization header 取出 JWT 並驗證後寫入 SecurityContext
+ * Phase A 重構:依 JWT 內 type/aid 從對應 repository 載入 AccountPrincipal。
+ * 三套帳號完全獨立,不再經 UserDetailsService。
  */
 @Component
 @RequiredArgsConstructor
@@ -30,7 +34,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final String PREFIX = "Bearer ";
 
     private final JwtUtil jwtUtil;
-    private final CustomUserDetailsService userDetailsService;
+    private final MemberRepository memberRepository;
+    private final FarmerRepository farmerRepository;
+    private final AdminRepository adminRepository;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -50,22 +56,52 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        String email = jwtUtil.extractEmail(token);
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        AccountType type = jwtUtil.extractType(token);
+        Long aid = jwtUtil.extractAccountId(token);
+        if (type == null || aid == null
+                || SecurityContextHolder.getContext().getAuthentication() != null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-            // 用 JWT 內的 active role 當權限,實現「同帳號可切換身份」
-            String activeRole = jwtUtil.extractRole(token);
-            List<GrantedAuthority> authorities = (activeRole != null)
-                    ? List.of(new SimpleGrantedAuthority("ROLE_" + activeRole))
-                    : List.copyOf(userDetails.getAuthorities());
-
+        AccountPrincipal principal = loadPrincipal(type, aid);
+        if (principal != null && principal.isEnabled()) {
             UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+                    new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authToken);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private AccountPrincipal loadPrincipal(AccountType type, Long aid) {
+        return switch (type) {
+            case MEMBER -> memberRepository.findById(aid)
+                    .map(this::toPrincipal).orElse(null);
+            case FARMER -> farmerRepository.findById(aid)
+                    .map(this::toPrincipal).orElse(null);
+            case ADMIN -> adminRepository.findById(aid)
+                    .map(this::toPrincipal).orElse(null);
+        };
+    }
+
+    private AccountPrincipal toPrincipal(Member m) {
+        return AccountPrincipal.builder()
+                .id(m.getId()).email(m.getEmail()).type(AccountType.MEMBER)
+                .enabled(m.getStatus() == AccountStatus.NORMAL)
+                .build();
+    }
+    private AccountPrincipal toPrincipal(Farmer f) {
+        return AccountPrincipal.builder()
+                .id(f.getId()).email(f.getEmail()).type(AccountType.FARMER)
+                .enabled(Boolean.TRUE.equals(f.getCertPassed()) && f.getStatus() == AccountStatus.NORMAL)
+                .build();
+    }
+    private AccountPrincipal toPrincipal(Admin a) {
+        return AccountPrincipal.builder()
+                .id(a.getId()).email(a.getEmail()).type(AccountType.ADMIN)
+                .enabled(a.getStatus() == AccountStatus.NORMAL)
+                .build();
     }
 }

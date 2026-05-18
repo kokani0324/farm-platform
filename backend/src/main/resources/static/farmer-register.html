@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小農申請｜你儂我農</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .farmer-card { max-width: 640px; }
+    .notice {
+      margin: 0 0 14px; padding: 10px 12px; border-radius: var(--radius);
+      background: #fff7e6; color: #8a5a00; border: 1px solid #f3d68d; font-size: 13px;
+    }
+    .auth-ok {
+      display: none; margin: 0 0 12px; padding: 10px 12px; border-radius: var(--radius);
+      background: #e6f4ea; color: #1e7a3a; border: 1px solid #bfe3cb; font-size: 14px;
+    }
+    .auth-ok.is-visible { display: block; }
+  </style>
+</head>
+<body data-page="auth">
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="你儂我農首頁">
+      <span class="brand-seal">儂</span>
+      <span><strong>你儂我農</strong><small>from soil to table</small></span>
+    </a>
+    <nav class="utility-nav">
+      <a href="index.html">回到首頁</a>
+      <a href="login.html">小農登入</a>
+    </nav>
+  </header>
+
+  <main class="auth-wrapper">
+    <section class="auth-card farmer-card">
+      <span class="eyebrow">farmer application</span>
+      <h1>小農申請入口</h1>
+      <div class="notice">
+        ⚠ 小農帳號需通過管理員審核才能登入。請務必填寫真實資料並上傳證明文件。
+        審核期間請耐心等待。會員(消費者)註冊請點 <a href="register.html">這裡</a>。
+      </div>
+
+      <div class="auth-error" id="farmerError"></div>
+      <div class="auth-ok" id="farmerOk"></div>
+
+      <form id="farmerForm" novalidate>
+        <label class="field">
+          <span>農場名稱</span>
+          <input type="text" id="farmName" maxlength="50" required>
+        </label>
+        <label class="field">
+          <span>Email(登入帳號)</span>
+          <input type="email" id="email" maxlength="50" required autocomplete="email">
+        </label>
+        <label class="field">
+          <span>密碼(6-64 字元)</span>
+          <input type="password" id="password" minlength="6" maxlength="64" required autocomplete="new-password">
+        </label>
+        <label class="field">
+          <span>農場地址</span>
+          <input type="text" id="farmAddress" maxlength="100" required>
+        </label>
+        <label class="field">
+          <span>聯絡電話</span>
+          <input type="tel" id="phone" maxlength="20" placeholder="09xx-xxx-xxx">
+        </label>
+        <label class="field">
+          <span>農場介紹</span>
+          <textarea id="farmDesc" rows="3" maxlength="2000" placeholder="作物、栽種理念、特色等"></textarea>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <label class="field">
+            <span>農場緯度(選填)</span>
+            <input type="number" id="locLat" step="0.0000001" placeholder="24.123456">
+          </label>
+          <label class="field">
+            <span>農場經度(選填)</span>
+            <input type="number" id="locLong" step="0.0000001" placeholder="121.123456">
+          </label>
+        </div>
+        <label class="field">
+          <span>證明文件類型</span>
+          <select id="certType" required>
+            <option value="">-- 請選擇 --</option>
+            <option value="IDENTITY">身分證明</option>
+            <option value="LAND">土地證明</option>
+            <option value="PRODUCT">農產品證明</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>上傳證明文件(jpg/png/pdf,最大 5MB)</span>
+          <input type="file" id="certFile" accept="image/*,application/pdf">
+        </label>
+        <button class="primary-button" type="submit" id="submitBtn">送出申請</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script>
+    (function () {
+      const errBox = document.getElementById("farmerError");
+      const okBox  = document.getElementById("farmerOk");
+      function showErr(msg) { errBox.textContent = msg; errBox.classList.add("is-visible"); okBox.classList.remove("is-visible"); }
+      function showOk(msg)  { okBox.textContent  = msg; okBox.classList.add("is-visible");  errBox.classList.remove("is-visible"); }
+
+      function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload  = () => resolve(reader.result); // 含 data: 前綴,後端會剝掉
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      document.getElementById("farmerForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const farmName    = document.getElementById("farmName").value.trim();
+        const email       = document.getElementById("email").value.trim();
+        const password    = document.getElementById("password").value;
+        const farmAddress = document.getElementById("farmAddress").value.trim();
+        const phone       = document.getElementById("phone").value.trim() || null;
+        const farmDesc    = document.getElementById("farmDesc").value.trim() || null;
+        const locLatStr   = document.getElementById("locLat").value;
+        const locLongStr  = document.getElementById("locLong").value;
+        const certType    = document.getElementById("certType").value || null;
+        const certFileEl  = document.getElementById("certFile").files[0];
+
+        if (!farmName || !email || !password || !farmAddress) {
+          showErr("農場名稱、Email、密碼、農場地址皆為必填"); return;
+        }
+        if (certFileEl && certFileEl.size > 5 * 1024 * 1024) {
+          showErr("檔案超過 5MB"); return;
+        }
+        let certFileBase64 = null;
+        if (certFileEl) {
+          try { certFileBase64 = await readFileAsBase64(certFileEl); }
+          catch { showErr("無法讀取檔案"); return; }
+        }
+
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = true; const original = btn.textContent; btn.textContent = "送出中…";
+        try {
+          await NongAuth.farmerRegister({
+            email, password, farmName, farmAddress, phone, farmDesc,
+            locLat:  locLatStr  ? Number(locLatStr)  : null,
+            locLong: locLongStr ? Number(locLongStr) : null,
+            certType, certFileBase64
+          });
+          showOk("申請已送出,待管理員審核通過後即可登入。3 秒後回到首頁…");
+          setTimeout(() => { location.href = "index.html"; }, 3000);
+        } catch (err) {
+          showErr(err.message || "申請失敗");
+        } finally {
+          btn.disabled = false; btn.textContent = original;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

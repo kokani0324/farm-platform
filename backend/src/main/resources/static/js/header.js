@@ -39,6 +39,7 @@ const NongHeader = (function () {
           <div class="nav-item"><a href="group-buys.html" data-nav-key="group-buys">團購</a></div>
           <div class="nav-item"><a href="farm-trips.html" data-nav-key="farm-trips">體驗活動</a></div>
           <div class="nav-item"><a href="blogs.html"      data-nav-key="blogs">部落格</a></div>
+          <div class="nav-item"><a href="news.html"       data-nav-key="news">最新消息</a></div>
           <div class="user-zone" id="userZone"></div>
         </nav>
       </header>
@@ -64,8 +65,8 @@ const NongHeader = (function () {
       `;
       return;
     }
-    const role = user.activeRole || user.role;
-    const roleLabel = role === "FARMER" ? "小農" : role === "ADMIN" ? "管理員" : "消費者";
+    const type = user.type;
+    const typeLabel = type === "FARMER" ? "小農" : type === "ADMIN" ? "管理員" : "會員";
     const initial = (user.name || user.email || "U").slice(0, 1);
 
     zone.innerHTML = `
@@ -73,7 +74,7 @@ const NongHeader = (function () {
         <span aria-hidden="true">🛒</span>
         <span class="cart-badge" id="cartBadge">0</span>
       </a>
-      <span class="user-greeting">${roleLabel}・${escapeHtml(user.name || user.email)}</span>
+      <span class="user-greeting">${typeLabel}・${escapeHtml(user.name || user.email)}</span>
       <div class="user-dropdown" id="userDropdown">
         <button class="user-avatar" type="button" aria-haspopup="true">${escapeHtml(initial)}</button>
         <div class="user-menu" role="menu">
@@ -89,24 +90,23 @@ const NongHeader = (function () {
   }
 
   function buildUserMenuItems(user) {
-    const role = user.activeRole || user.role;
-    const roles = Array.isArray(user.roles) ? user.roles : [];
-    const isConsumer = role === "CONSUMER";
-    const isFarmer = role === "FARMER";
-    const isAdmin = role === "ADMIN";
+    const type = user.type;
+    const isMember = type === "MEMBER";
+    const isFarmer = type === "FARMER";
+    const isAdmin  = type === "ADMIN";
     const items = [`<a href="profile.html">會員中心</a>`];
 
-    if (isConsumer) {
+    if (isMember) {
       items.push(`<a href="orders.html">我的訂單</a>`);
+      items.push(`<a href="wishlist.html">我的收藏 ♥</a>`);
       items.push(`<a href="my-group-buy-requests.html">我發起的團購</a>`);
       items.push(`<a href="my-group-buys.html">我參加的團購</a>`);
       items.push(`<a href="my-group-buy-orders.html">我的團購整單</a>`);
       items.push(`<a href="my-farm-trip-bookings.html">我的體驗預約</a>`);
+      items.push(`<a href="my-blogs.html">我的文章</a>`);
     }
     if (isFarmer) {
       items.push(`<a href="farmer.html">前往小農工作台</a>`);
-    }
-    if (!isAdmin) {
       items.push(`<a href="my-blogs.html">我的文章</a>`);
     }
     if (isAdmin) {
@@ -114,13 +114,7 @@ const NongHeader = (function () {
       items.push(`<a href="admin.html">前往管理員後台</a>`);
     }
 
-    const hasFarmer   = roles.includes("FARMER");
-    const hasConsumer = roles.includes("CONSUMER");
-    if (hasFarmer && hasConsumer && !isAdmin) {
-      items.push(`<div class="divider"></div>`);
-      if (!isConsumer) items.push(`<button data-action="switch" data-target="CONSUMER">切換為消費者</button>`);
-      if (!isFarmer)   items.push(`<button data-action="switch" data-target="FARMER">切換為小農</button>`);
-    }
+    // Phase A 拆分後一個帳號只屬一種身份,不再提供切換按鈕
 
     items.push(`<div class="divider"></div>`);
     items.push(`<button class="danger" data-action="logout">登出</button>`);
@@ -137,18 +131,8 @@ const NongHeader = (function () {
       if (action === "logout") {
         NongAuth.logoutAll();
         window.location.href = "index.html";
-      } else if (action === "switch") {
-        try {
-          const next = await NongAuth.switchRole(target.dataset.target);
-          if (next.activeRole === "FARMER") {
-            window.location.href = "farmer.html";
-          } else {
-            window.location.reload();
-          }
-        } catch (err) {
-          alert("切換失敗：" + (err.message || err));
-        }
       }
+      // Phase A 拆分後拿掉 switchRole;若要在會員/小農之間切換,各自獨立帳號重新登入
     });
 
     const avatar = dropdown.querySelector(".user-avatar");
@@ -170,19 +154,18 @@ const NongHeader = (function () {
     const badge = document.getElementById("cartBadge");
     if (!badge) return;
     const user = NongAuth.getConsumerUser();
-    if (!user) return;
-    const role = user.activeRole || user.role;
-    if (role !== "CONSUMER") return;
+    if (!user || user.type !== "MEMBER") {
+      badge.classList.remove("is-visible");
+      return;
+    }
     try {
       const cart = await NongAuth.request("/api/cart");
-      const qty = cart.totalQuantity || 0;
-      if (qty > 0) {
-        badge.textContent = qty > 99 ? "99+" : String(qty);
-        badge.classList.add("is-visible");
-      } else {
-        badge.classList.remove("is-visible");
-      }
-    } catch (_e) { /* 未登入或失敗就不顯示 */ }
+      const qty = cart?.totalQuantity ?? 0;
+      badge.textContent = qty > 99 ? "99+" : String(qty);
+      badge.classList.toggle("is-visible", qty > 0);
+    } catch (_e) {
+      badge.classList.remove("is-visible");
+    }
   }
 
   function escapeHtml(str) {

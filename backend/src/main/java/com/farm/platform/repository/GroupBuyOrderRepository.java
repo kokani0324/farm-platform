@@ -1,9 +1,10 @@
 package com.farm.platform.repository;
 
+import com.farm.platform.entity.Farmer;
 import com.farm.platform.entity.GroupBuy;
 import com.farm.platform.entity.GroupBuyOrder;
 import com.farm.platform.entity.GroupBuyOrderStatus;
-import com.farm.platform.entity.User;
+import com.farm.platform.entity.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -19,10 +20,10 @@ public interface GroupBuyOrderRepository extends JpaRepository<GroupBuyOrder, Lo
     Optional<GroupBuyOrder> findByGroupBuy(GroupBuy groupBuy);
 
     @EntityGraph(attributePaths = {"groupBuy", "groupBuy.product", "host", "farmer"})
-    Page<GroupBuyOrder> findByHostOrderByCreatedAtDesc(User host, Pageable pageable);
+    Page<GroupBuyOrder> findByHostOrderByCreatedAtDesc(Member host, Pageable pageable);
 
     @EntityGraph(attributePaths = {"groupBuy", "groupBuy.product", "host", "farmer"})
-    Page<GroupBuyOrder> findByFarmerOrderByCreatedAtDesc(User farmer, Pageable pageable);
+    Page<GroupBuyOrder> findByFarmerOrderByCreatedAtDesc(Farmer farmer, Pageable pageable);
 
     long countByStatus(GroupBuyOrderStatus status);
 }

@@ -3,6 +3,8 @@ package com.farm.platform.dto;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class BlogRequest {
 
@@ -19,4 +21,7 @@ public class BlogRequest {
 
     @Size(max = 500)
     private String coverImageUrl;
+
+    /** 文中介紹的商品 id；可空 */
+    private List<Long> productIds;
 }

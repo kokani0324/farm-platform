@@ -1,20 +1,21 @@
 package com.farm.platform.dto;
 
+import com.farm.platform.entity.PricingMode;
 import com.farm.platform.entity.TripType;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
+/** 小農新增 / 編輯體驗活動（不含場次，場次走 session API） */
 @Data
 public class FarmTripRequest {
 
     @NotNull
-    private Long categoryId;
+    private TripType tripType;
 
     @NotNull
-    private TripType tripType;
+    private PricingMode pricingMode;
 
     @NotBlank
     @Size(max = 30)
@@ -33,19 +34,7 @@ public class FarmTripRequest {
     @DecimalMin(value = "0.00")
     private BigDecimal price;
 
-    @NotNull
+    /** PER_PERSON 必填(>=1)；PER_WEIGHT 可為 null 表示無上限 */
     @Min(value = 1)
-    private Integer capacity;
-
-    @NotNull
-    private LocalDateTime tripStart;
-
-    @NotNull
-    private LocalDateTime tripEnd;
-
-    @NotNull
-    private LocalDateTime bookStart;
-
-    @NotNull
-    private LocalDateTime bookEnd;
+    private Integer capacityPerSession;
 }

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>最新消息管理｜管理員後台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="admin" data-active-side="news">
+  <div id="headerHost"></div>
+  <main class="dashboard-layout">
+    <div id="sidebarHost"></div>
+    <section class="dashboard-main">
+      <div class="dashboard-hero">
+        <div>
+          <span class="eyebrow">news</span>
+          <h2>最新消息</h2>
+          <p>平台公告管理；發布後會顯示在前台「最新消息」頁面。</p>
+        </div>
+        <button class="primary-button" id="newBtn">+ 新增消息</button>
+      </div>
+
+      <article class="panel-card is-large" style="grid-column:1/-1">
+        <table class="data-table">
+          <thead><tr><th>標題</th><th>狀態</th><th>發布人</th><th>發布時間</th><th>操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="5" style="text-align:center;color:var(--muted)">載入中…</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="formModal">
+    <div class="modal-card" style="max-width:720px">
+      <h2 id="modalTitle">新增最新消息</h2>
+      <form id="newsForm">
+        <input type="hidden" id="newsId">
+        <label class="field"><span>標題（≤80 字）</span><input type="text" id="title" maxlength="80" required></label>
+        <label class="field"><span>摘要（≤200 字，前台列表顯示）</span><input type="text" id="summary" maxlength="200"></label>
+        <label class="field"><span>封面圖網址</span><input type="url" id="coverImageUrl" maxlength="500" placeholder="https://..."></label>
+        <label class="field"><span>內文</span><textarea id="content" maxlength="50000" required style="min-height:200px"></textarea></label>
+        <label class="field"><span>狀態</span>
+          <select id="status">
+            <option value="PUBLISHED">已發布</option>
+            <option value="HIDDEN">下架</option>
+          </select>
+        </label>
+        <div class="modal-foot">
+          <button class="user-btn ghost" type="button" data-close-modal>取消</button>
+          <button class="primary-button" type="submit">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-flash" id="toast"></div>
+  <script src="js/auth.js"></script>
+  <script src="js/admin-shell.js"></script>
+  <script>
+  (async function () {
+    const esc = AdminShell.escapeHtml;
+    const fmt = (iso) => { if (!iso) return "—"; const d = new Date(iso); const p = (n)=>String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+    const rows = document.getElementById("rows");
+
+    await reload();
+    document.getElementById("newBtn").addEventListener("click", () => openModal(null));
+
+    document.addEventListener("click", async (e) => {
+      const edit = e.target.closest("[data-edit]");
+      if (edit) { openModal(edit.dataset.edit); return; }
+      const del = e.target.closest("[data-del]");
+      if (del) {
+        if (!confirm("確定刪除此則最新消息？")) return;
+        try { await NongAuth.request(`/api/admin/news/${del.dataset.del}`, { method: "DELETE" }); toast("已刪除"); await reload(); }
+        catch (err) { toast(err.message || "刪除失敗", true); }
+        return;
+      }
+      if (e.target.matches("[data-close-modal]") || e.target.classList.contains("modal-backdrop")) {
+        document.getElementById("formModal").classList.remove("is-open");
+      }
+    });
+
+    document.getElementById("newsForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("newsId").value;
+      const payload = {
+        title: document.getElementById("title").value.trim(),
+        summary: document.getElementById("summary").value.trim() || null,
+        content: document.getElementById("content").value.trim(),
+        coverImageUrl: document.getElementById("coverImageUrl").value.trim() || null,
+        status: document.getElementById("status").value,
+      };
+      try {
+        if (id) await NongAuth.request(`/api/admin/news/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+        else await NongAuth.request(`/api/admin/news`, { method: "POST", body: JSON.stringify(payload) });
+        document.getElementById("formModal").classList.remove("is-open");
+        toast("已儲存");
+        await reload();
+      } catch (err) { toast(err.message || "失敗", true); }
+    });
+
+    async function openModal(id) {
+      document.getElementById("newsId").value = id || "";
+      document.getElementById("modalTitle").textContent = id ? "編輯最新消息" : "新增最新消息";
+      if (id) {
+        const n = await NongAuth.request(`/api/admin/news/${id}`);
+        document.getElementById("title").value = n.title || "";
+        document.getElementById("summary").value = n.summary || "";
+        document.getElementById("coverImageUrl").value = n.coverImageUrl || "";
+        document.getElementById("content").value = n.content || "";
+        document.getElementById("status").value = n.status || "PUBLISHED";
+      } else {
+        document.getElementById("newsForm").reset();
+        document.getElementById("status").value = "PUBLISHED";
+      }
+      document.getElementById("formModal").classList.add("is-open");
+    }
+
+    async function reload() {
+      try {
+        const page = await NongAuth.request("/api/admin/news?size=30");
+        const list = page.content || [];
+        if (!list.length) { rows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted)">尚無最新消息</td></tr>`; return; }
+        rows.innerHTML = list.map(n => `
+          <tr>
+            <td><strong>${esc(n.title)}</strong>${n.summary ? `<div style="color:var(--muted);font-size:12px">${esc(n.summary)}</div>` : ""}</td>
+            <td><span class="status ${n.status === "PUBLISHED" ? "" : "warning"}">${n.status === "PUBLISHED" ? "已發布" : "下架"}</span></td>
+            <td>${esc(n.publishedBy || "—")}</td>
+            <td>${fmt(n.publishedAt)}</td>
+            <td>
+              <button class="user-btn ghost" data-edit="${n.id}">編輯</button>
+              <a class="user-btn ghost" href="news-detail.html?id=${n.id}" target="_blank">預覽</a>
+              <button class="user-btn ghost" data-del="${n.id}" style="color:var(--clay)">刪除</button>
+            </td>
+          </tr>
+        `).join("");
+      } catch (e) { rows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--clay)">載入失敗：${esc(e.message)}</td></tr>`; }
+    }
+
+    function toast(msg, isError) {
+      const t = document.getElementById("toast"); if (!t) return;
+      t.textContent = msg; t.classList.toggle("is-error", !!isError); t.classList.add("is-visible");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("is-visible"), 1800);
+    }
+  })();
+  </script>
+</body>
+</html>
