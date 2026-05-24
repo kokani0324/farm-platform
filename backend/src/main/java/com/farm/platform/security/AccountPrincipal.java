@@ -1,6 +1,6 @@
 package com.farm.platform.security;
 
-import com.farm.platform.entity.AccountType;
+import com.farm.platform.account.entity.AccountType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

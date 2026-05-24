@@ -1,13 +1,13 @@
 package com.farm.platform.security;
 
-import com.farm.platform.entity.AccountStatus;
-import com.farm.platform.entity.AccountType;
-import com.farm.platform.entity.Admin;
-import com.farm.platform.entity.Farmer;
-import com.farm.platform.entity.Member;
-import com.farm.platform.repository.AdminRepository;
-import com.farm.platform.repository.FarmerRepository;
-import com.farm.platform.repository.MemberRepository;
+import com.farm.platform.account.entity.AccountStatus;
+import com.farm.platform.account.entity.AccountType;
+import com.farm.platform.account.entity.Admin;
+import com.farm.platform.account.entity.Farmer;
+import com.farm.platform.account.entity.Member;
+import com.farm.platform.account.repository.AdminRepository;
+import com.farm.platform.account.repository.FarmerRepository;
+import com.farm.platform.account.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

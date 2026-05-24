@@ -1,6 +1,6 @@
 package com.farm.platform.security;
 
-import com.farm.platform.entity.AccountType;
+import com.farm.platform.account.entity.AccountType;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
