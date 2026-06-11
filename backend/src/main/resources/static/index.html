@@ -19,8 +19,8 @@
     <button class="mobile-menu" id="mobileMenu" type="button" aria-label="開啟選單">☰</button>
 
     <nav class="main-nav" id="mainNav" aria-label="消費者主要功能">
-      <div class="nav-item"><a href="index.html"      data-nav-key="home">首頁</a></div>
-      <div class="nav-item"><a href="products.html"   data-nav-key="products">逛商品</a></div>
+      <div class="nav-item"><a href="news.html"       data-nav-key="news">最新消息</a></div>
+      <div class="nav-item"><a href="products.html"   data-nav-key="products">全部商品</a></div>
       <div class="nav-item"><a href="group-buys.html" data-nav-key="group-buys">團購</a></div>
       <div class="nav-item"><a href="farm-trips.html" data-nav-key="farm-trips">體驗活動</a></div>
       <div class="nav-item"><a href="blogs.html"      data-nav-key="blogs">部落格</a></div>
@@ -32,30 +32,67 @@
   <main>
     <section class="hero-slider" aria-label="首頁幻燈片">
       <div class="slide is-active" data-slide>
-        <div class="slide-photo photo-orchard"></div>
+        <div class="slide-photo photo-hero-main"></div>
         <div class="slide-copy">
-          <span class="eyebrow">本週旬味</span>
-          <h1>把剛好的季節，放進今天的餐桌。</h1>
-          <p>從農人手裡接過最新鮮的水果、蔬菜與米糧，也接過一段土地正在發生的故事。</p>
-          <a class="primary-button" href="products.html">看看當季商品</a>
-        </div>
-      </div>
-      <div class="slide" data-slide>
-        <div class="slide-photo photo-market"></div>
-        <div class="slide-copy">
-          <span class="eyebrow">團購專區</span>
-          <h1>一起買，讓產地配送更穩定。</h1>
-          <p>社區、辦公室、親友都能開團，讓小農更好安排採收與出貨，消費者也買得更划算。</p>
-          <a class="primary-button" href="group-buys.html">加入團購</a>
-        </div>
-      </div>
-      <div class="slide" data-slide>
-        <div class="slide-photo photo-field"></div>
-        <div class="slide-copy">
-          <span class="eyebrow">食農體驗</span>
+          <span class="eyebrow">farm experience</span>
           <h1>到田裡走一趟，理解一口飯的來處。</h1>
-          <p>採果、插秧、果醬課與農村小旅行，讓消費者不只購買，也真正認識生產者。</p>
-          <a class="primary-button" href="farm-trips.html">預約活動</a>
+          <p>從採收、料理到餐桌，讓每一次購買都能看見土地與生產者。</p>
+          <div class="hero-actions">
+            <a class="primary-button" href="farm-trips.html">預約體驗活動</a>
+            <a class="secondary-button" href="products.html">逛當季商品</a>
+          </div>
+          <aside class="hero-note">
+            <span>本週推薦</span>
+            <strong>食農小旅行與產地採收體驗開放報名</strong>
+          </aside>
+        </div>
+      </div>
+      <div class="slide" data-slide>
+        <div class="slide-photo photo-hero-market"></div>
+        <div class="slide-copy">
+          <span class="eyebrow">weekly harvest</span>
+          <h1>本週旬味上架，從產地直送餐桌。</h1>
+          <p>依季節挑選蔬果、米糧與加工品，減少中間耗損，把新鮮留給你。</p>
+          <div class="hero-actions">
+            <a class="primary-button" href="products.html">看精選商品</a>
+            <a class="secondary-button" href="group-buys.html">一起開團</a>
+          </div>
+          <aside class="hero-note">
+            <span>產地直送</span>
+            <strong>小農自行定價，平台協助曝光與訂單服務</strong>
+          </aside>
+        </div>
+      </div>
+      <div class="slide" data-slide>
+        <div class="slide-photo photo-hero-deal"></div>
+        <div class="slide-copy">
+          <span class="eyebrow">special picks</span>
+          <h1>當季好物與團購優惠，一眼挑好。</h1>
+          <p>把限量、預購、惜福與禮盒整理成清楚入口，讓消費者更快找到需要的農產。</p>
+          <div class="hero-actions">
+            <a class="primary-button" href="products.html">查看特價推薦</a>
+            <a class="secondary-button" href="news.html">看最新公告</a>
+          </div>
+          <aside class="hero-note is-deal">
+            <span>本週特價</span>
+            <strong>產季商品、團購組合與活動公告集中更新</strong>
+          </aside>
+        </div>
+      </div>
+      <div class="slide" data-slide>
+        <div class="slide-photo photo-hero-journal"></div>
+        <div class="slide-copy">
+          <span class="eyebrow">blog</span>
+          <h1>部落格，把產地故事帶回家。</h1>
+          <p>用食譜、蔬果知識與農家日誌，讓購物不只停在下單，也留下理解與回訪。</p>
+          <div class="hero-actions">
+            <a class="primary-button" href="blogs.html">閱讀推薦文章</a>
+            <a class="secondary-button" href="news.html">追蹤最新消息</a>
+          </div>
+          <aside class="hero-note">
+            <span>推薦閱讀</span>
+            <strong>食譜、產地日記與農業小知識每週更新</strong>
+          </aside>
         </div>
       </div>
 
@@ -63,6 +100,7 @@
         <button class="slide-dot is-active" type="button" data-slide-to="0" aria-label="第一張"></button>
         <button class="slide-dot" type="button" data-slide-to="1" aria-label="第二張"></button>
         <button class="slide-dot" type="button" data-slide-to="2" aria-label="第三張"></button>
+        <button class="slide-dot" type="button" data-slide-to="3" aria-label="第四張"></button>
       </div>
     </section>
 
@@ -73,56 +111,78 @@
       <article><strong>會員服務</strong><p>支援訂單查詢、收藏、優惠券與活動報名紀錄。</p></article>
     </section>
 
-    <section class="section-block">
+    <section class="section-block home-section">
       <div class="section-heading">
         <span class="eyebrow">products</span>
-        <h2>本週精選商品</h2>
-        <p>挑幾樣本週最受歡迎的；想看完整列表請到「逛商品」頁。</p>
+        <h2>主題分類推薦</h2>
+        <p>依照產季、料理情境與配送需求，把小農商品整理成更好逛的入口。</p>
       </div>
-      <div class="product-grid" id="productGrid"></div>
-      <div style="text-align:center;margin-top:24px">
-        <a class="primary-button" href="products.html">看完整商品列表</a>
+      <div class="home-section-tools">
+        <div class="category-pills" id="homeCategoryPills"></div>
+        <a class="text-link" href="products.html">More ›</a>
       </div>
+      <div class="showcase-grid" id="productGrid"></div>
     </section>
 
-    <section class="story-band">
-      <div class="story-photo photo-farmer"></div>
-      <div>
-        <span class="eyebrow">farmer stories</span>
-        <h2>認識為你種植的人</h2>
-        <p>文青風格不只靠顏色，也靠文字節奏。讓小農故事成為消費者購買前的信任入口。</p>
-        <div class="farmer-list">
-          <article><strong>青山農場</strong><span>有機葉菜．低溫配送</span></article>
-          <article><strong>日光果園</strong><span>自然熟成．產銷履歷</span></article>
-          <article><strong>穗禾田</strong><span>米糧禮盒．食農體驗</span></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="journal-section">
+    <section class="section-block home-section experience-section">
       <div class="section-heading">
-        <span class="eyebrow">read with seasons</span>
-        <h2>邊吃邊讀</h2>
+        <span class="eyebrow">farm trips</span>
+        <h2>食農體驗活動</h2>
+        <p>採收、參訪、手作課與農村小旅行，讓消費者面對面認識產地。</p>
+      </div>
+      <div class="showcase-grid" id="tripPreview"></div>
+      <div class="section-more">
+        <a class="primary-button" href="farm-trips.html">看所有活動</a>
+      </div>
+    </section>
+
+    <section class="section-block home-section news-section">
+      <div class="section-heading">
+        <span class="eyebrow">news</span>
+        <h2>最新消息</h2>
+        <p>產季預購、平台公告與活動通知，都在這裡快速追蹤。</p>
+      </div>
+      <div class="news-grid" id="newsPreview"></div>
+      <div class="section-more">
+        <a class="secondary-button" href="news.html">看所有消息</a>
+      </div>
+    </section>
+
+    <section class="journal-section home-section">
+      <div class="section-heading">
+        <span class="eyebrow">blog</span>
+        <h2>部落格</h2>
         <p>把蔬果知識、食譜與產地故事放在購物流程旁邊，增加停留與回訪。</p>
       </div>
       <div class="journal-grid" id="blogPreview"></div>
-      <div style="text-align:center;margin-top:24px">
+      <div class="section-more">
         <a class="primary-button" href="blogs.html">看所有文章</a>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div>
-      <strong>你儂我農</strong>
-      <p>CKA101 第三組專題，純 HTML/CSS/JS 前端，後端 Spring Boot + MySQL。</p>
+  <footer class="site-footer scenic-footer">
+    <div class="footer-landscape" aria-hidden="true">
+      <span class="cloud cloud-left"></span>
+      <span class="cloud cloud-right"></span>
+      <span class="hill hill-back"></span>
+      <span class="hill hill-front"></span>
     </div>
-    <div class="footer-links">
-      <a href="products.html">逛商品</a>
-      <a href="group-buys.html">團購</a>
-      <a href="farm-trips.html">體驗活動</a>
-      <a href="blogs.html">部落格</a>
-      <a href="login.html">登入 / 註冊</a>
+    <div class="footer-content">
+      <a class="footer-brand" href="index.html" aria-label="你儂我農首頁">
+        <span class="brand-seal">儂</span>
+        <strong>你儂我農</strong>
+        <p>連結台灣小農與你的餐桌，吃得新鮮，也吃得安心。</p>
+      </a>
+      <div class="footer-links">
+        <a href="news.html">最新消息</a>
+        <a href="products.html">全部商品</a>
+        <a href="group-buys.html">團購</a>
+        <a href="farm-trips.html">體驗活動</a>
+        <a href="blogs.html">部落格</a>
+        <a href="login.html">登入 / 註冊</a>
+      </div>
+      <p class="footer-note">CKA101 第三組專題｜Spring Boot + MySQL｜from soil to table</p>
     </div>
   </footer>
 

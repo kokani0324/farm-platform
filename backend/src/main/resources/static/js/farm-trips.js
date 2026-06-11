@@ -10,7 +10,7 @@ const currency = (v) => `NT$ ${Number(v).toLocaleString("zh-TW")}`;
 const TRIP_TYPE_LABELS = { FARM_EXPERIENCE: "農場體驗", FIELD_VISIT: "產地參訪" };
 const PRICING_LABELS  = { PER_PERSON: "每人", PER_WEIGHT: "每公斤" };
 
-let activeTripType = null;
+let activeTripType = new URLSearchParams(location.search).get("tripType") || null;
 
 (async function init() { await loadTrips(); })();
 
@@ -49,6 +49,7 @@ function renderPills() {
     const pill = e.target.closest("[data-trip-type]"); if (!pill) return;
     const v = pill.dataset.tripType;
     activeTripType = v === "" ? null : v;
+    syncTripQuery();
     await loadTrips();
   };
 }
@@ -81,3 +82,10 @@ function renderCard(t) {
 }
 
 function same(a, b) { return (a == null && b == null) || a === b; }
+
+function syncTripQuery() {
+  const params = new URLSearchParams();
+  if (activeTripType) params.set("tripType", activeTripType);
+  const next = params.toString();
+  history.replaceState(null, "", next ? `?${next}` : location.pathname);
+}
