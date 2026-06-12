@@ -284,7 +284,7 @@ const ProducerPage = (function () {
       <article class="producer-card">
         <a class="producer-card-image" href="producer-detail.html?id=${producer.id}"
            style="background-image:url('${esc(producer.heroImage)}')" aria-label="${esc(producer.name)}">
-          ${producer.logoUrl ? `<span class="producer-logo-mark"><img src="${esc(producer.logoUrl)}" alt="${esc(producer.name)} logo"></span>` : ""}
+          }
         </a>
         <div class="producer-card-body">
           <div class="producer-card-top">
@@ -312,7 +312,7 @@ const ProducerPage = (function () {
         <div class="producer-hero-media" style="background-image:url('${esc(producer.heroImage)}')" role="img" aria-label="${esc(producer.name)}"></div>
         <div class="producer-hero-copy">
           <div class="producer-title-lockup">
-            ${producer.logoUrl ? `<img class="producer-detail-logo" src="${esc(producer.logoUrl)}" alt="${esc(producer.name)} logo">` : ""}
+           
             <div>
               <span class="eyebrow">${esc(producer.origins[0] || "producer")}</span>
               <h1>${esc(producer.name)}</h1>

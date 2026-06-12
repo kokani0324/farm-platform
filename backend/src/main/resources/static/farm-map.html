@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, "Noto Sans TC", sans-serif;
+        }
+
+        .map-page {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .map-sidebar {
+            padding: 20px;
+            overflow-y: auto;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            z-index: 10;
+        }
+
+        .map-sidebar h1 {
+            margin: 0 0 8px;
+            font-size: 24px;
+
+        }
+        .map-sidebar p {
+            margin: 0 0 20px;
+            color: #666;
+        }
+
+        .farm-list {
+            display: grid;
+            gap: 14px;
+        }
+
+        .farm-card {
+            display: grid;
+            grid-template-columns: 96px 1fr;
+            gap: 12px;
+            padding: 10px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #f8faf7;
+        }
+
+        .farm-card h2 {
+            margin: 0 0 6px;
+            font-size: 16px;
+        }
+
+        .farm-card p {
+            margin: 0;
+            color: #333;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .map-main {
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .farm-detail {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 340px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.2);
+            z-index: 500;
+        }
+
+        .farm-detail.is-hidden {
+            display: none;
+        }
+
+        .farm-detail img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .farm-detail-content {
+            padding: 16px;
+        }
+
+        .farm-detail h2 {
+            margin: 0 0 8px;
+            font-size: 20px;
+        }
+
+        .farm-detail p {
+            line-height: 1.7;
+        }
+
+        .detail-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            font-size: 22px;
+        }
+
+        .detail-button {
+            display: block;
+            margin-top: 14px;
+            padding: 12px;
+            text-align: center;
+            color: white;
+            background: #5b9b73;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .farm-card img {
+            width: 96px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .farm-card.is-active {
+            border-color: #2f7d4f;
+            background: #edf7ef;
+        }
+
+
+    </style>
+<!--    <link rel="stylesheet" href="css/styles.css">-->
+</head>
+<body>
+<div class="map-page">
+    <aside class="map-sidebar">
+    <h1>台灣小農地圖</h1>
+    <p>探索台灣各地農地與當季商品</p>
+
+        <div id="farmList" class="farm-list"></div>
+
+
+    </aside>
+    <main class="map-main">
+        <div id="map"></div>
+
+        <section id="farmDetail" class="farm-detail is-hidden"></section>
+    </main>
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+
+<script src="js/auth.js"></script>
+<script src="js/farm-map.js"></script>
+</body>
+</html>
