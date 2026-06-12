@@ -9,6 +9,7 @@ import com.farm.platform.blog.dto.BlogResponse;
 import com.farm.platform.blog.dto.BlogTypeResponse;
 import com.farm.platform.blog.dto.HandleReportRequest;
 import com.farm.platform.common.dto.PageResponse;
+import com.farm.platform.account.entity.AccountStatus;
 import com.farm.platform.account.entity.AccountType;
 import com.farm.platform.account.entity.Admin;
 import com.farm.platform.account.entity.Farmer;
@@ -69,6 +70,13 @@ public class BlogService {
         return PageResponse.of(page, BlogResponse::summary);
     }
 
+    public PageResponse<BlogResponse> listPublicByFarmer(Long farmerId, Pageable pageable) {
+        Farmer farmer = farmerRepo.findPublicById(farmerId, true, AccountStatus.NORMAL)
+                .orElseThrow(() -> new IllegalArgumentException("小農不存在或尚未公開"));
+        Page<Blog> page = blogRepo.findByAuthorFarmerAndStatusOrderByCreatedAtDesc(farmer, BlogStatus.PUBLISHED, pageable);
+        return PageResponse.of(page, BlogResponse::summary);
+    }
+
     @Transactional
     public BlogResponse getDetail(Long id) {
         Blog b = blogRepo.findFullById(id)
@@ -126,9 +134,6 @@ public class BlogService {
 
     private void checkTypePermission(BlogType type, AccountPrincipal me) {
         boolean isFarmerOnly = Boolean.TRUE.equals(type.getFarmerOnly());
-        if (me.getType() == AccountType.FARMER && !isFarmerOnly) {
-            throw new AccessDeniedException("小農只能在「產地日記」類別發表文章");
-        }
         if (me.getType() == AccountType.MEMBER && isFarmerOnly) {
             throw new AccessDeniedException("「" + type.getName() + "」僅限小農發表");
         }

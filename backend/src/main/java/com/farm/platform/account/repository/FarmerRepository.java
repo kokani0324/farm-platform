@@ -26,5 +26,30 @@ public interface FarmerRepository extends JpaRepository<Farmer, Long> {
             "order by f.createdAt desc")
     Page<Farmer> searchAdminList(@Param("keyword") String keyword, Pageable pageable);
 
+    @Query("""
+            select f from Farmer f
+            where f.certPassed = :certPassed
+              and f.status = :status
+              and (:keyword is null or :keyword = ''
+                   or lower(f.farmName) like lower(concat('%', :keyword, '%'))
+                   or lower(f.farmAddress) like lower(concat('%', :keyword, '%'))
+                   or lower(f.farmDesc) like lower(concat('%', :keyword, '%')))
+            order by f.createdAt desc
+            """)
+    Page<Farmer> searchPublic(@Param("certPassed") boolean certPassed,
+                              @Param("status") AccountStatus status,
+                              @Param("keyword") String keyword,
+                              Pageable pageable);
+
+    @Query("""
+            select f from Farmer f
+            where f.id = :id
+              and f.certPassed = :certPassed
+              and f.status = :status
+            """)
+    Optional<Farmer> findPublicById(@Param("id") Long id,
+                                    @Param("certPassed") boolean certPassed,
+                                    @Param("status") AccountStatus status);
+
     List<Farmer> findByCertPassedFalseOrderByCreatedAtDesc();
 }

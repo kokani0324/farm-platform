@@ -1,17 +1,20 @@
 /*
   blogs.html — 部落格列表
-  - GET /api/blogs?size=&blogTypeId=&keyword=
+  - GET /api/blogs?size=&typeId=&keyword=
 */
 
 const esc = NongHeader.escapeHtml;
 
 let activeTypeId = null;
 let currentKeyword = "";
+let blogTypes = [];
 
 (async function init() {
   const q = new URLSearchParams(location.search);
-  if (q.has("blogTypeId")) activeTypeId = Number(q.get("blogTypeId")) || null;
+  if (q.has("typeId")) activeTypeId = Number(q.get("typeId")) || null;
+  else if (q.has("blogTypeId")) activeTypeId = Number(q.get("blogTypeId")) || null;
   if (q.has("keyword"))    { currentKeyword = q.get("keyword"); document.getElementById("keyword").value = currentKeyword; }
+  await loadTypes();
   await loadBlogs();
   document.getElementById("searchForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -33,12 +36,12 @@ async function loadBlogs() {
   const grid = document.getElementById("blogGrid");
   grid.innerHTML = `<p style="grid-column:1/-1;color:var(--muted);text-align:center;">載入中…</p>`;
   const params = new URLSearchParams({ size: "24" });
-  if (activeTypeId != null) params.set("blogTypeId", String(activeTypeId));
+  if (activeTypeId != null) params.set("typeId", String(activeTypeId));
   if (currentKeyword) params.set("keyword", currentKeyword);
   try {
     const page = await NongAuth.request("/api/blogs?" + params.toString());
     const list = page.content || [];
-    renderPills(list);
+    renderPills();
     if (!list.length) {
       grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;margin:0;">沒有符合的文章。</div>`;
       return;
@@ -49,13 +52,19 @@ async function loadBlogs() {
   }
 }
 
-function renderPills(list) {
-  const c = document.getElementById("typePills");
-  const map = new Map();
-  for (const b of list) {
-    if (b.blogTypeId != null && !map.has(b.blogTypeId)) map.set(b.blogTypeId, b.blogTypeName || "未分類");
+async function loadTypes() {
+  try {
+    const types = await NongAuth.request("/api/blogs/types");
+    blogTypes = Array.isArray(types) ? types : [];
+  } catch (e) {
+    console.warn("/api/blogs/types", e.message);
+    blogTypes = [];
   }
-  const pills = [{ id: null, name: "全部" }, ...Array.from(map, ([id, name]) => ({ id, name }))];
+}
+
+function renderPills() {
+  const c = document.getElementById("typePills");
+  const pills = [{ id: null, name: "全部" }, ...blogTypes.map((type) => ({ id: type.id, name: type.name }))];
   c.innerHTML = pills.map((p) => `
     <button type="button" class="category-pill ${same(p.id, activeTypeId) ? "is-active" : ""}" data-type-id="${p.id == null ? "" : p.id}">${esc(p.name)}</button>
   `).join("");
@@ -79,7 +88,7 @@ function truncate(s, n) { s = String(s).replace(/\s+/g, " "); return s.length > 
 function same(a, b) { return (a == null && b == null) || a === b; }
 function syncQuery() {
   const params = new URLSearchParams();
-  if (activeTypeId != null) params.set("blogTypeId", String(activeTypeId));
+  if (activeTypeId != null) params.set("typeId", String(activeTypeId));
   if (currentKeyword) params.set("keyword", currentKeyword);
   const next = params.toString();
   history.replaceState(null, "", next ? `?${next}` : location.pathname);

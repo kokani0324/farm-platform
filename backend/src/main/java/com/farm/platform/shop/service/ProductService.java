@@ -3,6 +3,7 @@ package com.farm.platform.shop.service;
 import com.farm.platform.common.dto.PageResponse;
 import com.farm.platform.shop.dto.ProductRequest;
 import com.farm.platform.shop.dto.ProductResponse;
+import com.farm.platform.account.entity.AccountStatus;
 import com.farm.platform.account.entity.Farmer;
 import com.farm.platform.shop.entity.Category;
 import com.farm.platform.shop.entity.Product;
@@ -41,6 +42,13 @@ public class ProductService {
     }
 
     /* ========== 小農：管理 ========== */
+
+    public PageResponse<ProductResponse> searchActiveByFarmer(Long farmerId, Pageable pageable) {
+        Farmer farmer = farmerRepository.findPublicById(farmerId, true, AccountStatus.NORMAL)
+                .orElseThrow(() -> new IllegalArgumentException("小農不存在或尚未公開"));
+        Page<Product> page = productRepository.findByFarmerAndStatusOrderByCreatedAtDesc(farmer, ProductStatus.ACTIVE, pageable);
+        return PageResponse.of(page, ProductResponse::from);
+    }
 
     public List<ProductResponse> listMine(String farmerEmail) {
         Farmer farmer = getFarmer(farmerEmail);

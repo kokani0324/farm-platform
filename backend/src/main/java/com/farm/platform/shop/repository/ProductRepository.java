@@ -48,5 +48,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             """)
     Page<Product> adminSearch(@Param("keyword") String keyword, Pageable pageable);
 
+    Page<Product> findByFarmerAndStatusOrderByCreatedAtDesc(Farmer farmer, ProductStatus status, Pageable pageable);
+
     long countByStatus(ProductStatus status);
 }

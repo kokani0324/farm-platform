@@ -23,6 +23,8 @@ public interface FarmTripRepository extends JpaRepository<FarmTrip, Long> {
 
     Page<FarmTrip> findByFarmerOrderByCreatedAtDesc(Farmer farmer, Pageable pageable);
 
+    Page<FarmTrip> findByFarmerAndStatusInOrderByCreatedAtDesc(Farmer farmer, List<FarmTripStatus> statuses, Pageable pageable);
+
     Page<FarmTrip> findByStatusOrderByCreatedAtDesc(FarmTripStatus status, Pageable pageable);
 
     boolean existsByTitleAndFarmer(String title, Farmer farmer);

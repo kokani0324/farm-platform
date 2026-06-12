@@ -30,7 +30,7 @@ spring: #這個檔案室負責設定參數的，有資料庫的連線設定，JP
         pool:
           max-active: 16
           max-idle: 8
-          min-idle: 0
+          min-idle:   0
 
 server:
   port: 8080

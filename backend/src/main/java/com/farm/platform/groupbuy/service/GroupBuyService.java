@@ -8,6 +8,7 @@ import com.farm.platform.groupbuy.dto.GroupBuyResponse;
 import com.farm.platform.groupbuy.dto.JoinGroupBuyRequest;
 import com.farm.platform.groupbuy.dto.ParticipationResponse;
 import com.farm.platform.groupbuy.dto.ReviewGroupBuyRequest;
+import com.farm.platform.account.entity.AccountStatus;
 import com.farm.platform.account.entity.AccountType;
 import com.farm.platform.account.entity.Farmer;
 import com.farm.platform.account.entity.Member;
@@ -169,6 +170,14 @@ public class GroupBuyService {
 
     public PageResponse<GroupBuyResponse> listOpen(Pageable pageable, String viewerEmail) {
         Page<GroupBuy> page = groupBuyRepo.findByStatusOrderByDeadlineDateAsc(GroupBuyStatus.OPEN, pageable);
+        Member viewer = (viewerEmail != null) ? memberRepo.findByEmail(viewerEmail).orElse(null) : null;
+        return PageResponse.of(page, gb -> toResponse(gb, viewer));
+    }
+
+    public PageResponse<GroupBuyResponse> listOpenByFarmer(Long farmerId, Pageable pageable, String viewerEmail) {
+        Farmer farmer = farmerRepo.findPublicById(farmerId, true, AccountStatus.NORMAL)
+                .orElseThrow(() -> new IllegalArgumentException("小農不存在或尚未公開"));
+        Page<GroupBuy> page = groupBuyRepo.findByFarmerAndStatusOrderByDeadlineDateAsc(farmer, GroupBuyStatus.OPEN, pageable);
         Member viewer = (viewerEmail != null) ? memberRepo.findByEmail(viewerEmail).orElse(null) : null;
         return PageResponse.of(page, gb -> toResponse(gb, viewer));
     }

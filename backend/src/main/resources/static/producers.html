@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>農場清單｜農鮮平台</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="consumer" data-active-nav="producers">
+  <div id="headerHost"></div>
+
+  <section class="page-header producer-page-header">
+    <span class="eyebrow">producers</span>
+    <h1>農場清單</h1>
+    <p>從產地、商品、團購、體驗與日記找到你想認識的小農。</p>
+  </section>
+
+  <div class="toolbar producer-toolbar">
+    <div class="category-pills" id="producerScopePills"></div>
+    <form class="search" id="producerSearchForm" role="search">
+      <input type="search" id="producerKeyword" placeholder="搜尋農場 / 商品 / 產地" aria-label="搜尋農場">
+      <button class="secondary-button" type="submit">搜尋</button>
+    </form>
+  </div>
+
+  <main class="section-block producer-list-wrap" style="padding-top:0">
+    <div class="producer-grid" id="producerGrid"></div>
+  </main>
+
+  <footer class="site-footer">
+    <div><strong>農鮮平台</strong><p>from soil to table</p></div>
+    <div class="footer-links">
+      <a href="products.html">商品</a>
+      <a href="group-buys.html">團購</a>
+      <a href="farm-trips.html">體驗活動</a>
+      <a href="blogs.html">產地日記</a>
+    </div>
+  </footer>
+
+  <script src="js/auth.js"></script>
+  <script src="js/header.js"></script>
+  <script src="js/producers.js"></script>
+</body>
+</html>

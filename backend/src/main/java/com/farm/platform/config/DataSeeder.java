@@ -51,7 +51,7 @@ import java.util.List;
 
 /**
  * 種子採「不存在時建立」策略，重複執行不會炸。
- * 主要產出：5 個小農 × (3 商品 + 1 體驗活動 + 1 產地日記)。
+ * 主要產出：5 個小農 × (3 商品 + 1 體驗活動 + 1 部落格文章)。
  */
 @Component
 @RequiredArgsConstructor
@@ -89,7 +89,7 @@ public class DataSeeder implements CommandLineRunner {
         for (Farmer f : farmers) {
             seedProductsForFarmer(f);
             seedFarmTripForFarmer(f, admin);
-            seedFarmerDiaryBlog(f);
+            seedFarmerBlog(f);
         }
         backfillProductImages();
 
@@ -398,41 +398,49 @@ public class DataSeeder implements CommandLineRunner {
         log.info("[Seeder] {} 的體驗活動「{}」+ {} 場已建立", f.getFarmName(), seed.title(), seed.daysFromNow().length);
     }
 
-    /* ============================ 每位小農 1 篇產地日記 ============================ */
+    /* ============================ 每位小農 1 篇部落格文章 ============================ */
 
-    private void seedFarmerDiaryBlog(Farmer f) {
-        BlogType diary = blogTypeRepository.findByName("產地日記").orElseThrow();
-        if (blogRepository.existsByAuthorFarmerAndBlogType(f, diary)) return;
-
-        record DiarySeed(String title, String content, String cover) {}
+    private void seedFarmerBlog(Farmer f) {
+        record DiarySeed(String typeName, String title, String content, String cover) {}
         DiarySeed seed = switch (f.getEmail()) {
             case "demo@farmer.com" -> new DiarySeed(
+                    "產地日記",
                     "三星地區的小白菜栽培紀錄",
                     "從整地、播種到採收，記錄宜蘭三星的小白菜栽培過程。\n我們堅持不噴農藥，雖然辛苦，但能讓消費者吃得安心。",
                     "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=800");
             case "orchard@farmer.com" -> new DiarySeed(
-                    "梨山蘋果採收季節",
-                    "每年 11 月到 1 月是梨山富士蘋果最甜的時節。\n海拔 2000 公尺的低溫造就了脆甜的口感。",
+                    "蔬果知識分享",
+                    "高山蘋果挑選與保存方式",
+                    "梨山蘋果最怕悶熱，收到後建議放入冷藏蔬果室。\n挑選時可以看果皮亮度、香氣與重量，沉手的通常水分更足。",
                     "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=800");
             case "paddy@farmer.com" -> new DiarySeed(
-                    "池上禾田一年三穫日記",
-                    "從插秧、結穗到收割，池上稻米一年走兩到三穫。\n我們的田採用無毒栽培，水源來自卑南大圳。",
+                    "農作體驗回顧",
+                    "池上稻浪導覽體驗回顧",
+                    "這次帶大家走進萬安田區，從水圳、秧苗到稻穗成熟都實地看一次。\n孩子們第一次摸到稻穀，也理解一碗飯背後的時間。",
                     "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800");
             case "tea@farmer.com" -> new DiarySeed(
-                    "凍頂烏龍的春茶採摘日",
-                    "春茶最珍貴，每年清明前後是凍頂烏龍最香的時節。\n從手採嫩芽到揉捻焙火，全程用最傳統的工法。",
+                    "食譜分享",
+                    "冷泡烏龍茶與茶香飯做法",
+                    "高山烏龍很適合冷泡，茶葉與冷水約 1:80，放冰箱 6 小時即可。\n泡完的茶葉也能拌入白飯與海鹽，做成清爽茶香飯。",
                     "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?w=800");
             case "coop@farmer.com" -> new DiarySeed(
+                    "產地日記",
                     "東山放牧蛋場的雞舍日常",
                     "我們的雞每天都在山林裡放牧、自由覓食。\n蛋黃顏色金黃濃郁，因為餵的是無毒蔬菜與穀物。",
                     "https://images.unsplash.com/photo-1518569656558-1f25e69d93d7?w=800");
             default -> null;
         };
         if (seed == null) return;
-        blogRepository.save(Blog.builder()
-                .authorFarmer(f).blogType(diary)
-                .title(seed.title()).content(seed.content()).coverImageUrl(seed.cover())
-                .status(BlogStatus.PUBLISHED).build());
+
+        BlogType type = blogTypeRepository.findByName(seed.typeName()).orElseThrow();
+        Blog blog = blogRepository.findFirstByAuthorFarmerOrderByCreatedAtDesc(f)
+                .orElseGet(() -> Blog.builder().authorFarmer(f).build());
+        blog.setBlogType(type);
+        blog.setTitle(seed.title());
+        blog.setContent(seed.content());
+        blog.setCoverImageUrl(seed.cover());
+        blog.setStatus(BlogStatus.PUBLISHED);
+        blogRepository.save(blog);
     }
 
     /* ============================ 最新消息 ============================ */

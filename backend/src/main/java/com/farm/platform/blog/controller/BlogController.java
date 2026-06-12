@@ -36,9 +36,11 @@ public class BlogController {
 
     @GetMapping
     public PageResponse<BlogResponse> list(@RequestParam(required = false) Long typeId,
+                                           @RequestParam(required = false) Long blogTypeId,
                                            @RequestParam(required = false) String keyword,
                                            @PageableDefault(size = 12) Pageable pageable) {
-        return service.listPublic(typeId, keyword, pageable);
+        Long effectiveTypeId = typeId != null ? typeId : blogTypeId;
+        return service.listPublic(effectiveTypeId, keyword, pageable);
     }
 
     @GetMapping("/{id}")

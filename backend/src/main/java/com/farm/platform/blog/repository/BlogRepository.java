@@ -36,6 +36,8 @@ public interface BlogRepository extends JpaRepository<Blog, Long> {
 
     Page<Blog> findByAuthorMemberOrderByCreatedAtDesc(Member author, Pageable pageable);
     Page<Blog> findByAuthorFarmerOrderByCreatedAtDesc(Farmer author, Pageable pageable);
+    Page<Blog> findByAuthorFarmerAndStatusOrderByCreatedAtDesc(Farmer author, BlogStatus status, Pageable pageable);
+    Optional<Blog> findFirstByAuthorFarmerOrderByCreatedAtDesc(Farmer author);
 
     long countByStatus(BlogStatus status);
 

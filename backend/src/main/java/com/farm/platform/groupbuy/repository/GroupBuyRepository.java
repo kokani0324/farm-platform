@@ -19,6 +19,9 @@ public interface GroupBuyRepository extends JpaRepository<GroupBuy, Long> {
     @EntityGraph(attributePaths = {"product", "farmer", "host"})
     Page<GroupBuy> findByStatusOrderByDeadlineDateAsc(GroupBuyStatus status, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"product", "farmer", "host"})
+    Page<GroupBuy> findByFarmerAndStatusOrderByDeadlineDateAsc(Farmer farmer, GroupBuyStatus status, Pageable pageable);
+
     @EntityGraph(attributePaths = {"product", "host", "participations"})
     Page<GroupBuy> findByFarmerOrderByCreatedAtDesc(Farmer farmer, Pageable pageable);
 

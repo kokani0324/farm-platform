@@ -13,6 +13,7 @@
 const NongHeader = (function () {
   function init() {
     injectHeaderHostIfNeeded();
+    normalizeBrand();
     normalizeMainNav();
     enhanceProductNav();
     enhanceSectionNavMenus();
@@ -32,9 +33,9 @@ const NongHeader = (function () {
     if (!host) return;
     host.outerHTML = `
       <header class="site-header">
-        <a class="brand" href="index.html" aria-label="你儂我農首頁">
-          <span class="brand-seal">儂</span>
-          <span><strong>你儂我農</strong><small>from soil to table</small></span>
+        <a class="brand" href="index.html" aria-label="Farmily 首頁">
+          <span class="brand-seal">F</span>
+          <span><strong>Farmily</strong><small>Farmily</small></span>
         </a>
         <button class="mobile-menu" id="mobileMenu" type="button" aria-label="開啟選單">☰</button>
         <nav class="main-nav" id="mainNav" aria-label="消費者主要功能">
@@ -47,6 +48,18 @@ const NongHeader = (function () {
         </nav>
       </header>
     `;
+  }
+
+  function normalizeBrand() {
+    document.querySelectorAll(".brand").forEach((brand) => {
+      brand.setAttribute("aria-label", "Farmily 首頁");
+      const seal = brand.querySelector(".brand-seal");
+      const title = brand.querySelector("strong");
+      const subtitle = brand.querySelector("small");
+      if (seal) seal.textContent = "F";
+      if (title) title.textContent = "Farmily";
+      if (subtitle) subtitle.textContent = "Farmily";
+    });
   }
 
   function normalizeMainNav() {
@@ -66,6 +79,25 @@ const NongHeader = (function () {
     if (newsItem && nav.firstElementChild !== newsItem) {
       nav.insertBefore(newsItem, nav.firstElementChild);
     }
+    ensureProducerNav(nav);
+  }
+
+  function ensureProducerNav(nav) {
+    if (!nav) return;
+    let producerLink = nav.querySelector('[data-nav-key="producers"]');
+    let producerItem = producerLink?.closest(".nav-item");
+    if (!producerItem) {
+      const newsItem = nav.querySelector('[data-nav-key="news"]')?.closest(".nav-item");
+      const html = `<div class="nav-item"><a href="producers.html" data-nav-key="producers">農場</a></div>`;
+      if (newsItem) {
+        newsItem.insertAdjacentHTML("afterend", html);
+      } else {
+        nav.insertAdjacentHTML("afterbegin", html);
+      }
+      producerLink = nav.querySelector('[data-nav-key="producers"]');
+      producerItem = producerLink?.closest(".nav-item");
+    }
+    if (producerLink) producerLink.textContent = "農場";
   }
 
   function enhanceProductNav() {
@@ -145,7 +177,7 @@ const NongHeader = (function () {
       const types = await NongAuth.request("/api/blogs/types");
       const list = Array.isArray(types) ? types : [];
       const typeLinks = list.map((type) =>
-        `<a href="blogs.html?blogTypeId=${encodeURIComponent(type.id)}">${escapeHtml(type.name)}</a>`
+        `<a href="blogs.html?typeId=${encodeURIComponent(type.id)}">${escapeHtml(type.name)}</a>`
       );
       menu.innerHTML = [
         `<a href="blogs.html">全部文章</a>`,
@@ -290,12 +322,13 @@ const NongHeader = (function () {
           <span class="hill hill-front"></span>
         </div>
         <div class="footer-content">
-          <a class="footer-brand" href="index.html" aria-label="你儂我農首頁">
-            <span class="brand-seal">儂</span>
-            <strong>你儂我農</strong>
+          <a class="footer-brand" href="index.html" aria-label="Farmily 首頁">
+            <span class="brand-seal">F</span>
+            <strong>Farmily</strong>
             <p>連結台灣小農與你的餐桌，吃得新鮮，也吃得安心。</p>
           </a>
           <div class="footer-links">
+            <a href="producers.html">農場</a>
             <a href="news.html">最新消息</a>
             <a href="products.html">全部商品</a>
             <a href="group-buys.html">團購</a>

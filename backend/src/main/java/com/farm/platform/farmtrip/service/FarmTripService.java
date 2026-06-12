@@ -14,6 +14,7 @@ import com.farm.platform.farmtrip.dto.FarmTripSessionBatchRequest;
 import com.farm.platform.farmtrip.dto.FarmTripSessionBatchResponse;
 import com.farm.platform.farmtrip.dto.FarmTripSessionRequest;
 import com.farm.platform.farmtrip.dto.FarmTripSessionResponse;
+import com.farm.platform.account.entity.AccountStatus;
 import com.farm.platform.account.entity.Admin;
 import com.farm.platform.account.entity.Farmer;
 import com.farm.platform.account.entity.Member;
@@ -77,6 +78,13 @@ public class FarmTripService {
         Page<FarmTrip> page = (tripType != null)
                 ? tripRepo.findByTripTypeAndStatusInOrderByCreatedAtDesc(tripType, BROWSABLE, pageable)
                 : tripRepo.findByStatusInOrderByCreatedAtDesc(BROWSABLE, pageable);
+        return PageResponse.of(page, FarmTripResponse::from);
+    }
+
+    public PageResponse<FarmTripResponse> listPublicByFarmer(Long farmerId, Pageable pageable) {
+        Farmer farmer = farmerRepo.findPublicById(farmerId, true, AccountStatus.NORMAL)
+                .orElseThrow(() -> new IllegalArgumentException("小農不存在或尚未公開"));
+        Page<FarmTrip> page = tripRepo.findByFarmerAndStatusInOrderByCreatedAtDesc(farmer, BROWSABLE, pageable);
         return PageResponse.of(page, FarmTripResponse::from);
     }
 
