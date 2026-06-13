@@ -4,10 +4,34 @@ const markers = new Map();
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=80";
 
 const farmIcon = L.divIcon({
-    className: "farm-marker",
-    html: "農",
-    iconSize: [34, 34],
-    iconAnchor: [17, 17]
+    className: "farm-marker-shell",
+    html: `
+        <div style="
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border: 3px solid #4f9368;
+            border-radius: 50%;
+            background: #fff;
+            color: #4f9368;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .28);
+        ">
+            <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+                <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7 15h18l-2.3 9.5a3 3 0 0 1-2.9 2.3h-7.6a3 3 0 0 1-2.9-2.3L7 15Z"/>
+                    <path d="M10 15c.8-3.9 3-6 6-6s5.2 2.1 6 6"/>
+                    <path d="M16 9V4"/>
+                    <path d="M16 8c-3.1-.2-5.3-1.7-6.5-4.3"/>
+                    <path d="M16 8c3.1-.2 5.3-1.7 6.5-4.3"/>
+                    <path d="M11 20h10"/>
+                </g>
+            </svg>
+        </div>
+    `,
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+    popupAnchor: [0, -24]
 });
 
 const map = L.map("map", {
@@ -41,7 +65,7 @@ async function loadFarms() {
     const products = Array.isArray(productPage.content) ? productPage.content : productPage;
 
     return farmers
-        .filter((farmer) => Number.isFinite(Number(farmer.locLat)) && Number.isFinite(Number(farmer.locLong)))
+        .filter((farmer) => hasCoordinate(farmer.locLat) && hasCoordinate(farmer.locLong))
         .map((farmer) => ({
             id: farmer.id,
             name: farmer.farmName || "未命名農場",
@@ -52,6 +76,13 @@ async function loadFarms() {
             image: resolveFarmImage(farmer, products),
             link: `producer-detail.html?id=${farmer.id}`
         }));
+}
+
+function hasCoordinate(value) {
+    return value !== null
+        && value !== undefined
+        && String(value).trim() !== ""
+        && Number.isFinite(Number(value));
 }
 
 function resolveFarmImage(farmer, products) {
@@ -100,7 +131,7 @@ function renderFarmList() {
 
 function renderMarkers() {
     farms.forEach((farm) => {
-        const marker = L.marker([farm.lat, farm.lng])
+        const marker = L.marker([farm.lat, farm.lng], { icon: farmIcon })
             .addTo(map)
             .bindPopup(farm.name);
 

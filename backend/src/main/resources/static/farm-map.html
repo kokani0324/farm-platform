@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>產地地圖｜你儂我農</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin=""/>
+    <link rel="stylesheet" href="css/styles.css">
     <style>
         html, body {
             height: 100%;
@@ -13,29 +15,45 @@
             font-family: Arial, "Noto Sans TC", sans-serif;
         }
 
+        body {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            overflow: hidden;
+        }
+
+        body[data-active-nav="farm-map"] .main-nav .dropdown {
+            display: none;
+        }
+
         .map-page {
             display: grid;
             grid-template-columns: 380px 1fr;
-            height: 100vh;
+            min-height: 0;
             overflow: hidden;
         }
 
         .map-sidebar {
-            padding: 20px;
+            padding: 24px 20px;
             overflow-y: auto;
-            background: #fff;
-            border-right: 1px solid #ddd;
+            background:
+                linear-gradient(90deg, rgba(255, 255, 255, .30) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(255, 255, 255, .24) 1px, transparent 1px),
+                var(--paper);
+            background-size: 38px 38px;
+            border-right: 1px solid var(--line);
+            box-shadow: 8px 0 24px rgba(55, 45, 28, .08);
             z-index: 10;
         }
 
         .map-sidebar h1 {
             margin: 0 0 8px;
             font-size: 24px;
+            color: var(--ink);
 
         }
         .map-sidebar p {
-            margin: 0 0 20px;
-            color: #666;
+            margin: 0 0 22px;
+            color: var(--muted);
         }
 
         .farm-list {
@@ -48,10 +66,19 @@
             grid-template-columns: 96px 1fr;
             gap: 12px;
             padding: 10px;
-            border: 1px solid transparent;
+            border: 1px solid rgba(222, 208, 185, .72);
             border-radius: 8px;
             cursor: pointer;
-            background: #f8faf7;
+            background: rgba(255, 253, 247, .92);
+            box-shadow: 0 10px 24px rgba(55, 45, 28, .07);
+            transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease;
+        }
+
+        .farm-card:hover {
+            border-color: rgba(49, 95, 58, .42);
+            background: var(--white);
+            box-shadow: 0 14px 28px rgba(55, 45, 28, .11);
+            transform: translateY(-1px);
         }
 
         .farm-card h2 {
@@ -146,15 +173,33 @@
         }
 
         .farm-card.is-active {
-            border-color: #2f7d4f;
-            background: #edf7ef;
+            border-color: var(--leaf);
+            background: var(--leaf-light);
+            box-shadow: 0 14px 30px rgba(49, 95, 58, .16);
         }
 
 
     </style>
-<!--    <link rel="stylesheet" href="css/styles.css">-->
+  <link rel="icon" type="image/png" href="https://storage.googleapis.com/cka101-15/form/farmLogo.png?v=20260613-transparent">
 </head>
-<body>
+<body data-active-nav="farm-map">
+<header class="site-header">
+    <a class="brand" href="index.html" aria-label="Farmily 首頁">
+        <span class="brand-seal">儂</span>
+        <span><strong>你儂我農</strong><small>Farmily</small></span>
+    </a>
+    <button class="mobile-menu" id="mobileMenu" type="button" aria-label="開啟選單">☰</button>
+    <nav class="main-nav" id="mainNav" aria-label="消費者主要功能">
+        <div class="nav-item"><a href="news.html"       data-nav-key="news">最新消息</a></div>
+        <div class="nav-item"><a href="producers.html"  data-nav-key="producers">農場</a></div>
+        <div class="nav-item"><a href="products.html"   data-nav-key="products">全部商品</a></div>
+        <div class="nav-item"><a href="group-buys.html" data-nav-key="group-buys">團購</a></div>
+        <div class="nav-item"><a href="farm-trips.html" data-nav-key="farm-trips">體驗活動</a></div>
+        <div class="nav-item"><a href="blogs.html"      data-nav-key="blogs">部落格</a></div>
+        <div class="nav-item"><a href="farm-map.html"   data-nav-key="farm-map">產地地圖</a></div>
+        <div class="user-zone" id="userZone"></div>
+    </nav>
+</header>
 <div class="map-page">
     <aside class="map-sidebar">
     <h1>台灣小農地圖</h1>
@@ -177,6 +222,7 @@
         crossorigin=""></script>
 
 <script src="js/auth.js"></script>
-<script src="js/farm-map.js"></script>
+<script src="js/header.js?v=20260613-mapnav"></script>
+<script src="js/farm-map.js?v=20260613-marker"></script>
 </body>
 </html>

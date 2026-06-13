@@ -18,6 +18,7 @@
   --sky: #6f9288;
   --shadow: 0 18px 44px rgba(55, 45, 28, 0.12);
   --radius: 8px;
+  --brand-logo-url: url("https://storage.googleapis.com/cka101-15/form/farmLogo.png?v=20260613-transparent");
 }
 
 * { box-sizing: border-box; }
@@ -59,16 +60,18 @@ button { cursor: pointer; }
 }
 
 .brand-seal {
-  display: grid;
+  display: block;
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
-  place-items: center;
-  border-radius: var(--radius);
-  color: #fff;
-  background: var(--leaf);
-  font-weight: 800;
-  font-size: 20px;
-  line-height: 1;
+  border-radius: 0;
+  border: 0;
+  background: transparent var(--brand-logo-url) center / contain no-repeat;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  overflow: hidden;
+  box-shadow: none;
 }
 
 .brand strong { display: block; font-size: 19px; }
@@ -1234,7 +1237,7 @@ button { cursor: pointer; }
 }
 
 .footer-brand .brand-seal {
-  border-radius: 50%;
+  border-radius: 0;
 }
 
 .footer-brand strong {

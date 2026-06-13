@@ -240,13 +240,19 @@ public class DataSeeder implements CommandLineRunner {
     /* ============================ 5 位小農 ============================ */
 
     private List<Farmer> seedDemoFarmers() {
-        record FarmerSeed(String email, String farmName, String address, String phone, String desc) {}
+        record FarmerSeed(String email, String farmName, String address, String phone, String desc,
+                          String lat, String lng) {}
         List<FarmerSeed> seeds = List.of(
-                new FarmerSeed("demo@farmer.com",    "示範農場",       "宜蘭縣三星鄉示範路 1 號",   "0900000002", "宜蘭三星葉菜根莖多元種植，平台示範用。"),
-                new FarmerSeed("orchard@farmer.com", "梨山雲頂果園",   "台中市和平區梨山里中興路 88 號", "0900000003", "海拔 2000 公尺低溫栽培，蘋果水梨高山桃當令。"),
-                new FarmerSeed("paddy@farmer.com",   "池上禾田",       "台東縣池上鄉萬安村稻香路 12 號", "0900000004", "縱谷無毒栽培稻米，糙米白米糯米皆有。"),
-                new FarmerSeed("tea@farmer.com",     "杉林溪有機茶坊", "南投縣鹿谷鄉內湖村凍頂巷 5 號",  "0900000005", "凍頂烏龍世家三代，全程有機栽培。"),
-                new FarmerSeed("coop@farmer.com",    "東山放牧蛋場",   "台南市東山區嶺南里果毅後 26 號", "0900000006", "完全放牧土雞，蛋黃色澤金黃濃郁。")
+                new FarmerSeed("demo@farmer.com",    "示範農場",       "宜蘭縣三星鄉示範路 1 號",   "0900000002", "宜蘭三星葉菜根莖多元種植，平台示範用。",
+                        "24.6667", "121.6500"),
+                new FarmerSeed("orchard@farmer.com", "梨山雲頂果園",   "台中市和平區梨山里中興路 88 號", "0900000003", "海拔 2000 公尺低溫栽培，蘋果水梨高山桃當令。",
+                        "24.2542", "121.2550"),
+                new FarmerSeed("paddy@farmer.com",   "池上禾田",       "台東縣池上鄉萬安村稻香路 12 號", "0900000004", "縱谷無毒栽培稻米，糙米白米糯米皆有。",
+                        "23.1240", "121.2190"),
+                new FarmerSeed("tea@farmer.com",     "杉林溪有機茶坊", "南投縣鹿谷鄉內湖村凍頂巷 5 號",  "0900000005", "凍頂烏龍世家三代，全程有機栽培。",
+                        "23.6745", "120.7795"),
+                new FarmerSeed("coop@farmer.com",    "東山放牧蛋場",   "台南市東山區嶺南里果毅後 26 號", "0900000006", "完全放牧土雞，蛋黃色澤金黃濃郁。",
+                        "23.3206", "120.4036")
         );
 
         List<Farmer> result = new ArrayList<>();
@@ -259,15 +265,30 @@ public class DataSeeder implements CommandLineRunner {
                         .farmAddress(s.address())
                         .phone(s.phone())
                         .farmDesc(s.desc())
+                        .locLat(new BigDecimal(s.lat()))
+                        .locLong(new BigDecimal(s.lng()))
                         .certPassed(true)
                         .status(AccountStatus.NORMAL)
                         .build());
                 log.info("[Seeder] 建立範例小農 {} / 123456 ({})", s.email(), s.farmName());
                 return saved;
             });
+            if (isMissingDemoCoordinate(f)) {
+                f.setLocLat(new BigDecimal(s.lat()));
+                f.setLocLong(new BigDecimal(s.lng()));
+                f = farmerRepository.save(f);
+                log.info("[Seeder] 已補上範例小農 {} 的地圖座標", s.email());
+            }
             result.add(f);
         }
         return result;
+    }
+
+    private boolean isMissingDemoCoordinate(Farmer farmer) {
+        return farmer.getLocLat() == null
+                || farmer.getLocLong() == null
+                || BigDecimal.ZERO.compareTo(farmer.getLocLat()) == 0
+                || BigDecimal.ZERO.compareTo(farmer.getLocLong()) == 0;
     }
 
     /* ============================ 每位小農 3 個商品 ============================ */
